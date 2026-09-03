@@ -17,9 +17,13 @@ def install(lock_path: Path, destination: Path) -> bool:
     lock_bytes = lock_path.read_bytes()
     lock = json.loads(lock_bytes)
     stamp_value = hashlib.sha256(lock_bytes).hexdigest()
-    stamp = destination / ".ttl-lock-sha256"
-    if (destination.is_dir() and stamp.is_file() and (
-            stamp.read_text().strip() == stamp_value)):
+    stamp = destination / ".jsoncons-lock-sha256"
+    legacy_stamp = destination / ".ttc-lock-sha256"
+    accepted_stamps = (stamp, legacy_stamp)
+    if destination.is_dir() and any(
+            candidate.is_file() and
+            candidate.read_text().strip() == stamp_value
+            for candidate in accepted_stamps):
         return False
     if destination.exists():
         raise RuntimeError(
@@ -67,7 +71,7 @@ def install(lock_path: Path, destination: Path) -> bool:
                         f"unsupported archive entry: {member.name}")
         if not (extracted / "include/jsoncons/json.hpp").is_file():
             raise RuntimeError("jsoncons archive lacks include/jsoncons/json.hpp")
-        (extracted / ".ttl-lock-sha256").write_text(stamp_value + "\n")
+        (extracted / ".jsoncons-lock-sha256").write_text(stamp_value + "\n")
         extracted.rename(destination)
     finally:
         shutil.rmtree(temporary, ignore_errors=True)
