@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "id": "bad.flat-rank-two",
+  "model": "bad",
+  "profile": "TTL-Edu",
+  "axes": {"row": 2, "column": 2},
+  "references": [{"name": "test", "repository": "https://example.com", "revision": "0000000", "license": "MIT"}],
+  "generator": {"path": "test", "command": "test"},
+  "inputs": {"x": {"dtype": "f32", "axes": ["row", "column"], "shape": [2, 2], "data": [1, 2]}},
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {}
+}

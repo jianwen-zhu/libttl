@@ -7,7 +7,10 @@
 
 #include <jsoncons_ext/jsonschema/jsonschema.hpp>
 
+#include <cmath>
+#include <cstdint>
 #include <fstream>
+#include <limits>
 #include <map>
 #include <set>
 #include <sstream>
@@ -188,6 +191,157 @@ void validate_program_relationships(const json &root) {
     }
 }
 
+[[noreturn]] void invalid_fixture(
+    const std::string &location, const std::string &message) {
+    throw std::invalid_argument(
+        "fixture tensor " + location + " " + message);
+}
+
+void validate_fixture_leaf(
+    const json &value,
+    const std::string &dtype,
+    const std::string &location) {
+    if (dtype == "bool") {
+        if (!value.is_bool()) {
+            invalid_fixture(location, "must contain Boolean data");
+        }
+        return;
+    }
+    if (dtype == "i32") {
+        if (!value.is_int64()) {
+            invalid_fixture(location, "must contain signed 32-bit integers");
+        }
+        const int64_t integer = value.as<int64_t>();
+        if (integer < (std::numeric_limits<int32_t>::min)() ||
+            integer > (std::numeric_limits<int32_t>::max)()) {
+            invalid_fixture(location, "contains an integer outside i32 range");
+        }
+        return;
+    }
+    if (!value.is_number()) {
+        invalid_fixture(
+            location, "must contain numeric data for dtype " + dtype);
+    }
+    if (!std::isfinite(value.as<double>())) {
+        invalid_fixture(location, "must contain finite numeric data");
+    }
+}
+
+void validate_fixture_data(
+    const json &value,
+    const json &shape,
+    size_t dimension,
+    const std::string &dtype,
+    const std::string &location) {
+    if (dimension == shape.size()) {
+        if (value.is_array()) {
+            invalid_fixture(location, "data has more dimensions than its shape");
+        }
+        validate_fixture_leaf(value, dtype, location);
+        return;
+    }
+    if (!value.is_array()) {
+        invalid_fixture(location, "data has fewer dimensions than its shape");
+    }
+    const size_t expected = shape.at(dimension).as<size_t>();
+    if (value.size() != expected) {
+        invalid_fixture(
+            location,
+            "data extent " + std::to_string(value.size()) +
+                " does not match shape extent " + std::to_string(expected) +
+                " at dimension " + std::to_string(dimension));
+    }
+    for (size_t index = 0; index < value.size(); ++index) {
+        validate_fixture_data(
+            value.at(index), shape, dimension + 1, dtype,
+            location + "[" + std::to_string(index) + "]");
+    }
+}
+
+void validate_fixture_tensor(
+    const json &axis_bindings,
+    const json &tensor,
+    const std::string &location) {
+    const json &axes = tensor.at("axes");
+    const json &shape = tensor.at("shape");
+    if (axes.size() != shape.size()) {
+        invalid_fixture(location, "axes and shape must have equal lengths");
+    }
+    for (size_t dimension = 0; dimension < axes.size(); ++dimension) {
+        const std::string axis = axes.at(dimension).as<std::string>();
+        if (!axis_bindings.contains(axis)) {
+            invalid_fixture(location, "uses unbound axis " + axis);
+        }
+        const uint64_t extent = shape.at(dimension).as<uint64_t>();
+        const uint64_t binding = axis_bindings.at(axis).as<uint64_t>();
+        if (extent != binding) {
+            invalid_fixture(
+                location,
+                "shape extent " + std::to_string(extent) +
+                    " does not match axis " + axis + " binding " +
+                    std::to_string(binding));
+        }
+    }
+    validate_fixture_data(
+        tensor.at("data"), shape, 0,
+        tensor.at("dtype").as<std::string>(), location + ".data");
+}
+
+void validate_fixture_tensor_map(
+    const json &axis_bindings,
+    const json &tensors,
+    const std::string &section) {
+    for (const auto &member : tensors.object_range()) {
+        validate_fixture_tensor(
+            axis_bindings, member.value(),
+            section + "." + std::string(member.key()));
+    }
+}
+
+void validate_fixture_observation_map(
+    const json &axis_bindings,
+    const json &observations,
+    const std::string &section) {
+    for (const auto &member : observations.object_range()) {
+        const std::string location =
+            section + "." + std::string(member.key());
+        const json &observation = member.value();
+        const json &tensor = observation.at("tensor");
+        validate_fixture_tensor(axis_bindings, tensor, location);
+
+        const json &comparison = observation.at("comparison");
+        const std::string mode =
+            comparison.at("mode").as<std::string>();
+        const std::string dtype = tensor.at("dtype").as<std::string>();
+        if (mode == "tolerance") {
+            if (dtype == "bool" || dtype == "i32") {
+                invalid_fixture(
+                    location, "must use exact comparison for dtype " + dtype);
+            }
+            for (const char *name : {
+                     "absolute_tolerance", "relative_tolerance"}) {
+                if (!std::isfinite(comparison.at(name).as<double>())) {
+                    invalid_fixture(
+                        location,
+                        std::string(name) + " must be finite");
+                }
+            }
+        }
+    }
+}
+
+void validate_fixture_relationships(const json &root) {
+    const json &axis_bindings = root.at("axes");
+    validate_fixture_tensor_map(
+        axis_bindings, root.at("inputs"), "inputs");
+    validate_fixture_tensor_map(
+        axis_bindings, root.at("parameters"), "parameters");
+    validate_fixture_observation_map(
+        axis_bindings, root.at("checkpoints"), "checkpoints");
+    validate_fixture_observation_map(
+        axis_bindings, root.at("expected"), "expected");
+}
+
 }  // namespace
 
 json parse_and_validate_manifest(const std::filesystem::path &path) {
@@ -234,7 +388,10 @@ json parse_and_validate_program(const std::filesystem::path &path) {
 
 json parse_and_validate_fixture(const std::filesystem::path &path) {
     try {
-        return parse_and_validate(path, fixture_schema(), "test fixture");
+        json root = parse_and_validate(
+            path, fixture_schema(), "test fixture");
+        validate_fixture_relationships(root);
+        return root;
     } catch (const std::invalid_argument &) {
         throw;
     } catch (const std::exception &error) {

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "id": "bad.rank-zero-array",
+  "model": "bad",
+  "profile": "TTL-Edu",
+  "axes": {"n": 1},
+  "references": [{"name": "test", "repository": "https://example.com", "revision": "0000000", "license": "MIT"}],
+  "generator": {"path": "test", "command": "test"},
+  "inputs": {"x": {"dtype": "f32", "axes": [], "shape": [], "data": [1]}},
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {}
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "id": "libttl.semantic",
+  "model": "semantic",
+  "profile": "TTL-Edu",
+  "axes": {"row": 2, "column": 2},
+  "references": [
+    {
+      "name": "libttl",
+      "repository": "https://github.com/jianwen-zhu/libttl",
+      "revision": "cc4ad3db929c0acb4bd22b8b814b53330339b1e1",
+      "license": "MIT"
+    }
+  ],
+  "generator": {
+    "path": "tests/fixtures/semantic.fixture.json",
+    "command": "authored semantic validator fixture"
+  },
+  "inputs": {
+    "matrix": {
+      "dtype": "f32",
+      "axes": ["row", "column"],
+      "shape": [2, 2],
+      "data": [[1, 2.5], [-3, 4]]
+    },
+    "enabled": {
+      "dtype": "bool",
+      "axes": [],
+      "shape": [],
+      "data": true
+    }
+  },
+  "parameters": {
+    "steps": {
+      "dtype": "i32",
+      "axes": [],
+      "shape": [],
+      "data": 2
+    }
+  },
+  "checkpoints": {},
+  "expected": {
+    "output": {
+      "tensor": {
+        "dtype": "f32",
+        "axes": ["row", "column"],
+        "shape": [2, 2],
+        "data": [[1, 2.5], [-3, 4]]
+      },
+      "comparison": {
+        "mode": "tolerance",
+        "absolute_tolerance": 1e-6,
+        "relative_tolerance": 1e-5
+      }
+    },
+    "status": {
+      "tensor": {
+        "dtype": "bool",
+        "axes": [],
+        "shape": [],
+        "data": true
+      },
+      "comparison": {"mode": "exact"}
+    },
+    "index": {
+      "tensor": {
+        "dtype": "i32",
+        "axes": [],
+        "shape": [],
+        "data": 1
+      },
+      "comparison": {"mode": "exact"}
+    }
+  }
+}

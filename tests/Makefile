@@ -6,6 +6,8 @@ PROGRAM := $(TTL_LIBRARY_DIR)/tests/runtime_module_tests
 CONTRACT_CHECKER := $(TTL_BUILD_DIR)/ttl-contract-check
 VALID_MANIFESTS := $(wildcard fixtures/*/02_device/module.json) \
 	$(wildcard fixtures/*/03_tilelang/module.json)
+VALID_FIXTURES := fixtures/minimal.fixture.json fixtures/semantic.fixture.json
+MALFORMED_FIXTURES := $(wildcard malformed_fixtures/*.fixture.json)
 CAPABILITY_MODULE := capability_modules/$(TTL_BACKEND)
 ifeq ($(TTL_BACKEND),libtorch_cuda)
 BACKEND_DEFINE := -DTTL_TEST_CUDA=1
@@ -36,7 +38,15 @@ schema: $(CONTRACT_CHECKER)
 		fi; \
 	done
 	@$(CONTRACT_CHECKER) --program programs/identity/program.json
-	@$(CONTRACT_CHECKER) --fixture fixtures/minimal.fixture.json
+	@for fixture in $(VALID_FIXTURES); do \
+		$(CONTRACT_CHECKER) --fixture "$$fixture" || exit; \
+	done
+	@for fixture in $(MALFORMED_FIXTURES); do \
+		if $(CONTRACT_CHECKER) --fixture "$$fixture" >/dev/null 2>&1; then \
+			echo "shared validator unexpectedly accepted $$fixture" >&2; \
+			exit 1; \
+		fi; \
+	done
 	@for program in malformed_programs/*/program.json; do \
 		if $(CONTRACT_CHECKER) --program "$$program" >/dev/null 2>&1; then \
 			echo "shared validator unexpectedly accepted $$program" >&2; \
@@ -56,4 +66,3 @@ run: $(PROGRAM)
 
 abi: $(TTL_LIBRARY_DIR)/libttl.so
 	@$(PYTHON) check_abi.py $(TTL_LIBRARY_DIR)/libttl.so
-

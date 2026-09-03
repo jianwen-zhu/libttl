@@ -7,7 +7,8 @@
 namespace ttl_internal {
 
 // Parses JSON, validates the canonical version-1 schema, then checks the
-// cross-field name relationships that JSON Schema cannot express.
+// cross-field relationships and semantic invariants that JSON Schema cannot
+// express.
 jsoncons::json parse_and_validate_manifest(const std::filesystem::path &path);
 jsoncons::json parse_and_validate_launch(const std::filesystem::path &path);
 jsoncons::json parse_and_validate_program(const std::filesystem::path &path);

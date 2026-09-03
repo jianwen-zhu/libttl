@@ -208,10 +208,11 @@ make contract-check TTL_BUILD_DIR="$TTL_BUILD_DIR"
 "$TTL_BUILD_DIR/ttl-contract-check" --fixture path/to/fixture.json
 ```
 
-`ttl-contract-check` uses jsoncons and the same schema embedded in libttl. JSON
-Schema validates the portable structure. Cross-field invariants involving
-nested data shape, axis bindings, dtype value domains, and comparison policy
-must also be enforced by a fixture producer and by the runner before execution.
+`ttl-contract-check` uses jsoncons and the same schema embedded in libttl. It
+validates both the portable JSON structure and the cross-field invariants for
+nested data shape, axis bindings, dtype value domains, and comparison policy.
+Fixture producers should run this check, and the fixed runner must apply the
+same shared validation before execution.
 
 The ownership boundary is intentional:
 

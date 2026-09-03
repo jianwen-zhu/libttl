@@ -100,7 +100,6 @@
     "tensorData": {
       "oneOf": [
         { "type": "boolean" },
-        { "type": "integer" },
         { "type": "number" },
         {
           "type": "array",

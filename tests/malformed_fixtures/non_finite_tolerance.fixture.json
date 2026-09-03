@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "id": "bad.non-finite-tolerance",
+  "model": "bad",
+  "profile": "TTL-Edu",
+  "axes": {"n": 1},
+  "references": [{"name": "test", "repository": "https://example.com", "revision": "0000000", "license": "MIT"}],
+  "generator": {"path": "test", "command": "test"},
+  "inputs": {},
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {
+    "x": {
+      "tensor": {"dtype": "f32", "axes": ["n"], "shape": [1], "data": [1]},
+      "comparison": {"mode": "tolerance", "absolute_tolerance": 1e9999, "relative_tolerance": 0}
+    }
+  }
+}

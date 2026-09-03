@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "id": "bad.bool-data",
+  "model": "bad",
+  "profile": "TTL-Edu",
+  "axes": {"n": 2},
+  "references": [{"name": "test", "repository": "https://example.com", "revision": "0000000", "license": "MIT"}],
+  "generator": {"path": "test", "command": "test"},
+  "inputs": {"x": {"dtype": "bool", "axes": ["n"], "shape": [2], "data": [true, 0]}},
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {}
+}
