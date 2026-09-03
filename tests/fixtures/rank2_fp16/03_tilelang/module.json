@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "transpose.tilelang",
+  "kernel": {
+    "name": "transpose_kernel"
+  },
+  "tensors": [
+    {"name": "output", "dtype": "float16", "access": "write", "shape": [48, 32]},
+    {"name": "input", "dtype": "float16", "access": "read", "shape": [32, 48]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "input", "kind": "tensor", "name": "input"},
+    {"parameter": "output", "kind": "tensor", "name": "output"}
+  ]
+}

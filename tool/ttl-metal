@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Compile Metal source into a TTL MPS kernel module."""
+
+from __future__ import annotations
+
+import argparse
+
+from ttl_compiler import add_common_arguments, emit_metal_module
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="compile Metal source into a TTL kernel module")
+    add_common_arguments(parser, "ttl-metal")
+    args = parser.parse_args()
+    emit_metal_module(
+        source=args.source, manifest_path=args.manifest,
+        output=args.output, compiler_name="ttl-metal")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (RuntimeError, ValueError) as error:
+        raise SystemExit(f"ttl-metal: {error}") from error

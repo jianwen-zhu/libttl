@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "name": "bad.binding",
+  "kernel": {"name": "noop"},
+  "tensors": [],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "missing", "kind": "tensor", "name": "missing"}
+  ]
+}

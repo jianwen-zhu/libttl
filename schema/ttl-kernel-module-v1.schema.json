@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ttl:schema:kernel-module:1",
+  "title": "TTL kernel module manifest version 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "name", "kernel",
+    "tensors", "scalars", "arguments"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 1},
+    "name": {"type": "string", "minLength": 1},
+    "kernel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"}
+      }
+    },
+    "tensors": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/tensor"}
+    },
+    "scalars": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {"$ref": "#/$defs/scalar"}
+    },
+    "arguments": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/argument"}
+    }
+  },
+  "$defs": {
+    "dtype": {
+      "enum": [
+        "bool", "int8", "int32", "float16", "float32",
+        "float4_e2m1", "float8_e4m3", "float8_e8m0"
+      ]
+    },
+    "tensor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dtype", "access", "shape"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "dtype": {"$ref": "#/$defs/dtype"},
+        "access": {"enum": ["read", "write", "read_write"]},
+        "shape": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {"const": -1},
+              {"type": "integer", "minimum": 1}
+            ]
+          }
+        },
+        "contiguous": {"type": "boolean"}
+      }
+    },
+    "scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "dtype"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "dtype": {"enum": ["int32", "float32"]}
+      }
+    },
+    "argument": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parameter", "kind", "name"],
+          "properties": {
+            "parameter": {"type": "string", "minLength": 1},
+            "kind": {"const": "tensor"},
+            "name": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parameter", "kind", "name"],
+          "properties": {
+            "parameter": {"type": "string", "minLength": 1},
+            "kind": {"enum": ["scalar_value", "scalar_device"]},
+            "name": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parameter", "kind", "dtype", "value"],
+          "properties": {
+            "parameter": {"type": "string", "minLength": 1},
+            "kind": {"const": "literal"},
+            "dtype": {"const": "int32"},
+            "value": {
+              "type": "integer",
+              "minimum": -2147483648,
+              "maximum": 2147483647
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parameter", "kind", "dtype", "value"],
+          "properties": {
+            "parameter": {"type": "string", "minLength": 1},
+            "kind": {"const": "literal"},
+            "dtype": {"const": "float32"},
+            "value": {"type": "number"}
+          }
+        }
+      ]
+    }
+  }
+}

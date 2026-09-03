@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "id": "libttl.empty",
+  "model": "empty",
+  "profile": "TTL-Edu",
+  "axes": {"n": 1},
+  "references": [
+    {
+      "name": "libttl",
+      "repository": "https://example.invalid/libttl",
+      "revision": "0000000",
+      "license": "MIT"
+    }
+  ],
+  "generator": {
+    "path": "tests/fixtures/minimal.fixture.json",
+    "command": "authored test fixture"
+  },
+  "inputs": {},
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {}
+}

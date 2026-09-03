@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "name": "bad.duplicate",
+  "kernel": {"name": "noop"},
+  "tensors": [
+    {"name": "value", "dtype": "float32", "access": "read", "shape": [1]},
+    {"name": "value", "dtype": "float32", "access": "write", "shape": [1]}
+  ],
+  "scalars": [],
+  "arguments": []
+}

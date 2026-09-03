@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "name": "mutable-is-not-part-of-v1",
+  "inputs": [
+    {"name": "x", "dtype": "float32", "shape": [4], "mutable": true}
+  ],
+  "outputs": [
+    {"name": "y", "dtype": "float32", "shape": [4]}
+  ],
+  "calls": [
+    {"function": "identity", "arguments": ["x"], "results": ["y"]}
+  ]
+}

@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+"""Compile a TileLang definition into a TTL kernel module."""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import difflib
+import io
+import json
+import os
+import runpy
+import shutil
+import tempfile
+from pathlib import Path
+
+from ttl_compiler import (
+    add_common_arguments, emit_cuda_module, emit_metal_module, require,
+)
+
+
+def tilelang_include_paths(tilelang_module) -> list[Path]:
+    root = Path(tilelang_module.__file__).resolve().parent
+    reduce_header = next(root.rglob("tl_templates/cuda/reduce.h"))
+    cute_header = next(root.rglob("cute/numeric/numeric_types.hpp"))
+    return [reduce_header.parents[2], cute_header.parents[2]]
+
+
+def load_trace_passes(path: Path) -> list[str]:
+    passes = [
+        line.strip() for line in path.read_text().splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    require(bool(passes), f"trace pass list is empty: {path}")
+    require(len(passes) == len(set(passes)),
+            f"trace pass list contains duplicates: {path}")
+    return passes
+
+
+def latest_trace_run(trace_dir: Path) -> Path:
+    runs_root = trace_dir / "ttl-tilelang" / ".run_records"
+    runs = sorted(path for path in runs_root.glob("run_*") if path.is_dir())
+    require(bool(runs), f"TileLang did not produce trace records under {runs_root}")
+    return runs[-1]
+
+
+def curate_trace(
+    *, trace_dir: Path, pass_names: list[str], native_source: str,
+    native_suffix: str,
+) -> Path:
+    run_dir = latest_trace_run(trace_dir)
+    selected_dir = run_dir / "selected"
+    selected_dir.mkdir()
+    index = [
+        "TTL selected TileLang lowering checkpoints",
+        "",
+        "The complete compiler pipeline ran. This directory contains only the",
+        "pass boundaries selected by the 04_watch lab.",
+        "",
+    ]
+
+    first_before: Path | None = None
+    for stage, pass_name in enumerate(pass_names, 1):
+        before_matches = list(
+            run_dir.glob(f"pipeline_*/*_{pass_name}_before.tir"))
+        after_matches = list(
+            run_dir.glob(f"pipeline_*/*_{pass_name}_after.tir"))
+        require(len(before_matches) == 1 and len(after_matches) == 1,
+                f"expected exactly one traced {pass_name} pass; found "
+                f"{len(before_matches)} before and {len(after_matches)} after")
+        before = before_matches[0]
+        after = after_matches[0]
+        if first_before is None:
+            first_before = before
+        stem = f"{stage:02d}_{pass_name}"
+        selected_before = selected_dir / f"{stem}.before.tir"
+        selected_after = selected_dir / f"{stem}.after.tir"
+        selected_diff = selected_dir / f"{stem}.diff"
+        shutil.copyfile(before, selected_before)
+        shutil.copyfile(after, selected_after)
+        before_text = before.read_text()
+        after_text = after.read_text()
+        selected_diff.write_text("".join(difflib.unified_diff(
+            before_text.splitlines(keepends=True),
+            after_text.splitlines(keepends=True),
+            fromfile=selected_before.name, tofile=selected_after.name,
+        )))
+        index.append(f"{stage:02d}. {pass_name}")
+
+    assert first_before is not None
+    shutil.copyfile(first_before, selected_dir / "00_tile_program.tir")
+    kernel_path = selected_dir / f"kernel{native_suffix}"
+    kernel_path.write_text(native_source)
+    index.extend([
+        "",
+        f"Final native source: {kernel_path.name}",
+        "Full pass-by-pass report: ../../../report.html",
+        "",
+    ])
+    (selected_dir / "README.txt").write_text("\n".join(index))
+    return selected_dir
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="compile TileLang source into a TTL kernel module")
+    add_common_arguments(parser, "ttl-tilelang")
+    parser.add_argument("--trace-dir", type=Path)
+    parser.add_argument("--trace-passes", type=Path)
+    args = parser.parse_args()
+
+    require((args.trace_dir is None) == (args.trace_passes is None),
+            "--trace-dir and --trace-passes must be supplied together")
+    trace_passes: list[str] | None = None
+    if args.trace_dir is not None:
+        args.trace_dir = args.trace_dir.resolve()
+        args.trace_dir.mkdir(parents=True, exist_ok=True)
+        trace_passes = load_trace_passes(args.trace_passes)
+        # A watching run must execute the compiler instead of returning a
+        # previously cached kernel, otherwise there are no pass boundaries to
+        # observe. Lower tracing is instrumentation around the real pipeline.
+        os.environ["TILELANG_DISABLE_CACHE"] = "1"
+        os.environ["TL_LOWER_TRACE"] = "html"
+        os.environ["TL_LOWER_TRACE_DIR"] = str(args.trace_dir)
+
+    backend = os.environ.get("TTL_BACKEND", "libtorch_cuda")
+    require(backend in {"libtorch_cuda", "libtorch_mps"},
+            f"unsupported TTL_BACKEND {backend!r}")
+    if backend == "libtorch_cuda":
+        target = json.dumps({"kind": "cuda", "arch": args.arch})
+    else:
+        target = "metal"
+    os.environ["TILELANG_DEFAULT_TARGET"] = target
+
+    trace_stdout = io.StringIO() if trace_passes is not None else None
+    compile_output = (
+        contextlib.redirect_stdout(trace_stdout)
+        if trace_stdout is not None else contextlib.nullcontext())
+    try:
+        with compile_output:
+            import tilelang
+
+            namespace = runpy.run_path(args.source)
+            symbol = namespace.get("TTL_ENTRYPOINT")
+            specializations = namespace.get("TTL_SPECIALIZATIONS")
+            launch = namespace.get("TTL_LAUNCH")
+            require(isinstance(symbol, str),
+                    "TileLang source requires a TTL_ENTRYPOINT string")
+            require(isinstance(specializations, dict),
+                    "TileLang source requires a TTL_SPECIALIZATIONS dictionary")
+            require(isinstance(launch, dict),
+                    "TileLang source requires a TTL_LAUNCH dictionary")
+            kernel = namespace.get(symbol)
+            if kernel is None:
+                raise ValueError(
+                    f"TileLang source does not define {symbol!r}")
+            compiled = kernel.compile(**specializations)
+            native_source_text = compiled.get_kernel_source()
+    except Exception:
+        if trace_stdout is not None:
+            print(trace_stdout.getvalue(), end="")
+        raise
+    if trace_passes is not None:
+        print("[ttl-tilelang] watching passes: " + ", ".join(trace_passes))
+    with tempfile.TemporaryDirectory(prefix="ttl-tilelang-") as temporary:
+        if backend == "libtorch_cuda":
+            native_source = Path(temporary) / "kernel.cu"
+            native_source.write_text(native_source_text)
+            emit_cuda_module(
+                source=native_source, manifest_path=args.manifest,
+                output=args.output, arch=args.arch,
+                compiler_name="ttl-tilelang",
+                includes=tilelang_include_paths(tilelang),
+                nvcc_args=["-diag-suppress=20012"], launch=launch)
+        else:
+            native_source = Path(temporary) / "kernel.metal"
+            native_source.write_text(native_source_text)
+            metal_launch = dict(launch)
+            # TileLang lowers T.alloc_shared to static threadgroup variables in
+            # MSL. The CUDA launch allocation therefore must not cross the TTL
+            # backend boundary as dynamic Metal threadgroup storage.
+            metal_launch["shared_bytes"] = 0
+            emit_metal_module(
+                source=native_source, manifest_path=args.manifest,
+                output=args.output, compiler_name="ttl-tilelang",
+                launch=metal_launch)
+
+    if args.trace_dir is not None:
+        assert trace_passes is not None
+        selected_dir = curate_trace(
+            trace_dir=args.trace_dir, pass_names=trace_passes,
+            native_source=native_source_text,
+            native_suffix=".cu" if backend == "libtorch_cuda" else ".metal")
+        print(f"[ttl-tilelang] selected trace: {selected_dir}")
+        print(f"[ttl-tilelang] full trace: "
+              f"{args.trace_dir / 'ttl-tilelang' / 'report.html'}")
+
+
+if __name__ == "__main__":
+    main()

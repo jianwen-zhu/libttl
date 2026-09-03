@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ttl-lang.dev/schema/fixture-v1.json",
+  "title": "TTL model fixture bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "model",
+    "profile",
+    "axes",
+    "references",
+    "generator",
+    "inputs",
+    "parameters",
+    "checkpoints",
+    "expected"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "1.0" },
+    "id": { "$ref": "#/$defs/name" },
+    "model": { "$ref": "#/$defs/name" },
+    "profile": { "enum": ["TTL-Edu", "TTL-Prod"] },
+    "axes": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/axis" },
+      "additionalProperties": { "type": "integer", "minimum": 1 }
+    },
+    "references": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/reference" }
+    },
+    "generator": { "$ref": "#/$defs/generator" },
+    "inputs": { "$ref": "#/$defs/tensorMap" },
+    "parameters": { "$ref": "#/$defs/tensorMap" },
+    "checkpoints": { "$ref": "#/$defs/observationMap" },
+    "expected": { "$ref": "#/$defs/observationMap" }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+    },
+    "axis": {
+      "type": "string",
+      "pattern": "^\\$?[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "repository", "revision", "license"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "repository": { "type": "string", "format": "uri" },
+        "revision": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{7,64}$"
+        },
+        "license": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "command"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 },
+        "seed": { "type": ["integer", "string"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "tensor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dtype", "axes", "shape", "data"],
+      "properties": {
+        "dtype": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "axes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/axis" },
+          "uniqueItems": true
+        },
+        "shape": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "data": { "$ref": "#/$defs/tensorData" }
+      }
+    },
+    "tensorData": {
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "integer" },
+        { "type": "number" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tensorData" }
+        }
+      ]
+    },
+    "comparison": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "exact" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "absolute_tolerance", "relative_tolerance"],
+          "properties": {
+            "mode": { "const": "tolerance" },
+            "absolute_tolerance": { "type": "number", "minimum": 0 },
+            "relative_tolerance": { "type": "number", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tensor", "comparison"],
+      "properties": {
+        "stage": { "type": "string", "minLength": 1 },
+        "tensor": { "$ref": "#/$defs/tensor" },
+        "comparison": { "$ref": "#/$defs/comparison" }
+      }
+    },
+    "tensorMap": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/tensor" }
+    },
+    "observationMap": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/observation" }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Compile raw CUDA into a TTL CUDA kernel module."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from ttl_compiler import add_common_arguments, emit_cuda_module
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="compile CUDA source into a TTL kernel module")
+    add_common_arguments(parser, "ttl-cuda")
+    parser.add_argument("--include", type=Path, action="append", default=[])
+    parser.add_argument("--nvcc-arg", action="append", default=[])
+    args = parser.parse_args()
+    emit_cuda_module(
+        source=args.source, manifest_path=args.manifest, output=args.output,
+        arch=args.arch, compiler_name="ttl-cuda", includes=args.include,
+        nvcc_args=args.nvcc_arg)
+
+
+if __name__ == "__main__":
+    main()

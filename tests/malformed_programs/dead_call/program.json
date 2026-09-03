@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "malformed.dead_call",
+  "inputs": [
+    {"name": "x", "dtype": "float32", "shape": [4]}
+  ],
+  "outputs": [
+    {"name": "result", "dtype": "float32", "shape": [4]}
+  ],
+  "calls": [
+    {
+      "function": "copy",
+      "arguments": ["x"],
+      "results": ["unused"]
+    },
+    {
+      "function": "copy",
+      "arguments": ["x"],
+      "results": ["result"]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "name": "bad.artifact",
+  "kernel": {"name": "noop"},
+  "tensors": [],
+  "scalars": [],
+  "arguments": []
+}

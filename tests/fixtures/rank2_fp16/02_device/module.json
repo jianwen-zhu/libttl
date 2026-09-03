@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "name": "transpose.device",
+  "kernel": {
+    "name": "transpose_kernel"
+  },
+  "tensors": [
+    {"name": "output", "dtype": "float16", "access": "write", "shape": [48, 32]},
+    {"name": "input", "dtype": "float16", "access": "read", "shape": [32, 48]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "output", "kind": "tensor", "name": "output"},
+    {"parameter": "input", "kind": "tensor", "name": "input"},
+    {"parameter": "rows", "kind": "literal", "dtype": "int32", "value": 32},
+    {"parameter": "columns", "kind": "literal", "dtype": "int32", "value": 48}
+  ]
+}
