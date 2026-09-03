@@ -34,6 +34,7 @@ CUDA uses `TTL_BACKEND=libtorch_cuda`. Build products and the pinned jsoncons
 headers are stored outside the checkout under `~/.cache/libttl` by default.
 
 See [`docs/TTL_API.md`](docs/TTL_API.md),
-[`docs/TTL_PROGRAM.md`](docs/TTL_PROGRAM.md), and
+[`docs/TTL_PROGRAM.md`](docs/TTL_PROGRAM.md),
+[`docs/TTL_FIXTURE.md`](docs/TTL_FIXTURE.md), and
 [`docs/KERNEL_MODULE.md`](docs/KERNEL_MODULE.md) for the contracts.
 
