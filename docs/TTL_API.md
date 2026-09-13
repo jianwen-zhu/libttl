@@ -1,9 +1,9 @@
 # TTL public C API
 
-libttl (the Tiny Tensor Library) provides a small C interface for a fixed host
-harness to allocate tensors, move data, order device work, launch a prepared
-kernel, and check its result. Kernel producers may use handwritten device code,
-TileLang, or a future compiler while the harness continues to use this API.
+libttl (the Tiny Tensor Library) provides a small C interface for host
+applications to allocate tensors, move data, order device work, launch prepared
+kernels, and check results. Kernel producers may use handwritten device code,
+TileLang, or another compiler while applications continue to use this API.
 
 The public interface deliberately does not expose LibTorch, CUDA, Metal,
 DLPack, device pointers, or native stream handles. Current implementations use
@@ -157,8 +157,8 @@ current header. New bits may be added in later minor API versions. Portable
 applications must ignore unknown available bits and test only features they
 need.
 
-Capability discovery is deliberately separate from backend naming. It lets a
-harness make a compatibility decision without knowing whether the device is
+Capability discovery is deliberately separate from backend naming. It lets an
+application make a compatibility decision without knowing whether the device is
 implemented with CUDA, Metal, or another accelerator API.
 
 ## Tensors
@@ -378,7 +378,7 @@ and private `launch.json`, and validates both. The runtime derives the module's
 requirements from that validated description; callers do not parse the private
 file or duplicate a hand-authored capability list.
 
-Before preparation, a backend-neutral harness can preflight the pair:
+Before preparation, a backend-neutral application can preflight the pair:
 
 ```c
 ttl_capability_set_t available = 0;
@@ -438,8 +438,9 @@ The call reports enqueue-time errors but does not synchronize. Call
 Launch itself performs no compilation, dynamic symbol lookup, or persistent
 allocation.
 
-The public harness does not inspect the private manifest. In a lesson, the
-module's documented contract defines the array order. The AXPY modules use:
+The host application does not inspect the private launch description. The
+module's documented contract defines the public array order. An AXPY module
+might use:
 
 ```c
 ttl_tensor_t *tensors[] = {output, x, y};
@@ -486,17 +487,16 @@ dtypes and static shapes, prepares referenced functions, and allocates private
 intermediates. Launch is stream-ordered and asynchronous. CUDA currently uses
 a native CUDA Graph; the MPS implementation executes the same final-function
 DAG in its valid topological order. The public semantics are identical.
-One program may be prepared repeatedly with different tensor bindings, as in
-the twelve executions of the EinyGPT transformer-layer program.
+One program may be prepared repeatedly with different tensor bindings, for
+example when applying one reusable layer program at several positions.
 
 The complete format and lifecycle are specified in
 [TTL_PROGRAM.md](TTL_PROGRAM.md). A program never exposes native graph handles,
 device pointers, backend names, or mutable tensor state.
 
-## Complete lifecycle example
+## Lifecycle outline
 
-The reusable harness, instantiated with the AXPY case, demonstrates the
-intended order:
+The intended host-side lifecycle is:
 
 ```text
 run the host reference
@@ -513,13 +513,9 @@ if --device was supplied:
     destroy kernel, module, stream, tensors, and device
 ```
 
-The `ece467-labs` repository supplies small C exercises and an
-application-scale llm.c harness that demonstrate this lifecycle without
-exposing its function graph to host code.
-
 ## Portability boundary
 
-Portable harness code may depend on `include/libttl.h` and documented API
+Portable application code may depend on `include/libttl.h` and documented API
 contracts only. It must not depend on object layouts, private module descriptor
 types, native storage addresses, native streams, or either current LibTorch
 implementation. A different accelerator backend can implement the same TTL
@@ -527,6 +523,6 @@ surface and consume its appropriate native module artifact.
 
 SPMD collective communication is intentionally a separate additive layer. Its
 proposed device-bound process-group contract is isolated as a non-normative
-design note in [design/TTL_GROUP_API.md](design/TTL_GROUP_API.md); it does not
+design note in [design/TTL_GROUP_API.md](design/TTL_GROUP_API.md). It does not
 add rank or communication state to the local tensor, device, stream, or module
 interfaces.

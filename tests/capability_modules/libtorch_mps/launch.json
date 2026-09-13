@@ -1,6 +1,0 @@
-{
-  "schema_version": 1,
-  "backend": "libtorch_mps",
-  "artifact": {"format": "metallib", "file": "kernel.metallib"},
-  "kernel": {"name": "noop", "grid": [1], "block": [1], "shared_bytes": 64}
-}

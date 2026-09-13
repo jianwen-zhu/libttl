@@ -137,12 +137,12 @@ seed rather than redistributed model checkpoints.
 
 A committed fixture should be small enough to inspect and run on a CPU. Its
 recorded command should regenerate the bundle deterministically. Regeneration
-belongs to the fixture producer; ordinary consumers and student compilers need
-no upstream framework or generator dependencies.
+belongs to the fixture producer; ordinary consumers and compilers need no
+upstream framework or generator dependencies.
 
 ## Small example
 
-This complete example checks a two-element identity program. Real model
+This complete example checks a four-element identity program. Real model
 fixtures use an independently executed upstream reference and generally carry
 more parameters and observations.
 
@@ -150,10 +150,10 @@ more parameters and observations.
 {
   "$schema": "https://ttl-lang.dev/schema/fixture-v1.json",
   "schema_version": "1.0",
-  "id": "identity-two-f32",
+  "id": "identity-four-f32",
   "model": "identity",
   "profile": "TTL-Edu",
-  "axes": {"element": 2},
+  "axes": {"element": 4},
   "references": [
     {
       "name": "identity-reference",
@@ -165,27 +165,26 @@ more parameters and observations.
     }
   ],
   "generator": {
-    "path": "tests/fixtures/minimal.fixture.json",
-    "command": "authored structural fixture",
-    "seed": 7
+    "path": "tests/fixtures/identity.fixture.json",
+    "command": "cp tests/fixtures/identity.fixture.json fixture.json"
   },
   "inputs": {
-    "input": {
+    "x": {
       "dtype": "f32",
       "axes": ["element"],
-      "shape": [2],
-      "data": [1.25, -2.5]
+      "shape": [4],
+      "data": [1.25, -2.5, 0.0, 4.75]
     }
   },
   "parameters": {},
   "checkpoints": {},
   "expected": {
-    "output": {
+    "y": {
       "tensor": {
         "dtype": "f32",
         "axes": ["element"],
-        "shape": [2],
-        "data": [1.25, -2.5]
+        "shape": [4],
+        "data": [1.25, -2.5, 0.0, 4.75]
       },
       "comparison": {"mode": "exact"}
     }
@@ -194,9 +193,9 @@ more parameters and observations.
 ```
 
 The checked-in
-[`tests/fixtures/minimal.fixture.json`](../tests/fixtures/minimal.fixture.json)
-is deliberately only a structural validator smoke test; it is not a numerical
-oracle for a model.
+[`tests/fixtures/identity.fixture.json`](../tests/fixtures/identity.fixture.json)
+contains this example. `minimal.fixture.json` remains a deliberately empty
+structural smoke test rather than a numerical oracle.
 
 ## Validation and ownership
 
@@ -221,5 +220,5 @@ The ownership boundary is intentional:
 - compilers own `program.json` and final function packages;
 - the fixed runner owns fixture decoding, TTL-to-libttl dtype mapping, tensor
   construction, execution, and comparison;
-- students implementing a compiler do not parse, generate, or optimize around
-  fixture contents.
+- compiler implementations do not parse, generate, or optimize around fixture
+  contents.

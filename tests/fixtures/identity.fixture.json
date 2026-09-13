@@ -1,0 +1,43 @@
+{
+  "$schema": "https://ttl-lang.dev/schema/fixture-v1.json",
+  "schema_version": "1.0",
+  "id": "identity-four-f32",
+  "model": "identity",
+  "profile": "TTL-Edu",
+  "axes": {"element": 4},
+  "references": [
+    {
+      "name": "identity-reference",
+      "repository": "https://github.com/jianwen-zhu/libttl",
+      "revision": "ed71a850463632a1c6c8125a7c9d75ab1515a3e0",
+      "license": "MIT",
+      "source": "tests/programs/identity/program.json",
+      "role": "structural contract example"
+    }
+  ],
+  "generator": {
+    "path": "tests/fixtures/identity.fixture.json",
+    "command": "cp tests/fixtures/identity.fixture.json fixture.json"
+  },
+  "inputs": {
+    "x": {
+      "dtype": "f32",
+      "axes": ["element"],
+      "shape": [4],
+      "data": [1.25, -2.5, 0.0, 4.75]
+    }
+  },
+  "parameters": {},
+  "checkpoints": {},
+  "expected": {
+    "y": {
+      "tensor": {
+        "dtype": "f32",
+        "axes": ["element"],
+        "shape": [4],
+        "data": [1.25, -2.5, 0.0, 4.75]
+      },
+      "comparison": {"mode": "exact"}
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "name": "smoke.binding-probe",
+  "kernel": {"name": "binding_probe"},
+  "tensors": [
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [64]},
+    {"name": "x", "dtype": "float32", "access": "read", "shape": [64]},
+    {"name": "y", "dtype": "float32", "access": "read", "shape": [64]}
+  ],
+  "scalars": [
+    {"name": "alpha", "dtype": "float32"},
+    {"name": "bias", "dtype": "float32"}
+  ],
+  "arguments": [
+    {"parameter": "output", "kind": "tensor", "name": "output"},
+    {"parameter": "x", "kind": "tensor", "name": "x"},
+    {"parameter": "y", "kind": "tensor", "name": "y"},
+    {"parameter": "alpha", "kind": "scalar_value", "name": "alpha"},
+    {"parameter": "bias", "kind": "scalar_device", "name": "bias"},
+    {"parameter": "count", "kind": "literal", "dtype": "int32", "value": 64}
+  ]
+}

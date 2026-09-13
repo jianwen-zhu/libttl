@@ -17,8 +17,8 @@ launch geometry, and native kernel symbol. The artifact contains device code
 only. There is no generated host adapter, callback ABI, Python loader, or
 operator-specific host object.
 
-Single-kernel teaching labs load this package directly. A multi-function
-application instead loads a TTL program directory: its emitted `program.json`
+Single-function applications may load this package directly. A multi-function
+application instead loads a TTL program directory: its `program.json`
 composes final functions, and these packages live below `functions/` as an
 implementation detail. See [TTL_PROGRAM.md](TTL_PROGRAM.md).
 
@@ -46,13 +46,13 @@ ttl-cuda 0.1.0 (TTL compiler interface 1)
 ```
 
 The project-provided tools expect the shared checker built by
-`make ttl-contract-check`; normal root lab targets arrange this dependency.
+`make contract-check`; the root `tools-check` target arranges this dependency.
 
 `ttl-cuda` validates raw CUDA and calls `nvcc --cubin`. `ttl-metal` validates
 MSL buffer bindings and calls Apple's `metal` and `metallib` tools.
 `ttl-tilelang` asks TileLang for CUDA or Metal according to the selected TTL
-backend and follows the corresponding emission path. A student-built
-`ttl-ttl` is another producer of this exact directory contract.
+backend and follows the corresponding emission path. Other compilers can
+produce the same directory contract.
 
 ## Manifest layers
 
@@ -77,10 +77,10 @@ manifest.
 
 Tensor and scalar declarations have unique names, argument parameter names are
 unique, private artifact filenames cannot escape the module directory, and
-unknown fields are rejected. JSON structure is enforced by the canonical schemas;
-name uniqueness and argument references are checked centrally because standard
-JSON Schema cannot express those relationships. Matching a manifest's ordered
-parameters to generated native code remains a compiler-specific check.
+unknown fields are rejected. JSON structure is enforced by the canonical
+schemas; name uniqueness and argument references are checked centrally because
+standard JSON Schema cannot express those relationships. Matching a manifest's
+ordered parameters to generated native code remains a compiler-specific check.
 
 ## Runtime lifecycle
 

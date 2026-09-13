@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "smoke.identity",
+  "kernel": {"name": "identity"},
+  "tensors": [
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [64]},
+    {"name": "input", "dtype": "float32", "access": "read", "shape": [64]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "output", "kind": "tensor", "name": "output"},
+    {"parameter": "input", "kind": "tensor", "name": "input"},
+    {"parameter": "count", "kind": "literal", "dtype": "int32", "value": 64}
+  ]
+}

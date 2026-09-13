@@ -76,7 +76,7 @@ def run_checker(arguments: list[str], description: str) -> str:
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except FileNotFoundError as error:
         raise RuntimeError(
-            "ttl-contract-check is missing; run make ttl-contract-check") \
+            "ttl-contract-check is missing; run make contract-check") \
             from error
     except subprocess.CalledProcessError as error:
         raise ValueError(error.stderr.strip()) from error
@@ -279,8 +279,11 @@ def emit_metal_module(
     artifact = output / artifact_file
     with tempfile.TemporaryDirectory(prefix="ttl-metal-") as temporary:
         air = Path(temporary) / "kernel.air"
+        module_cache = Path(temporary) / "module-cache"
+        module_cache.mkdir()
         subprocess.run(
             [xcrun, "-sdk", "macosx", "metal", "-c", str(source),
+             f"-fmodules-cache-path={module_cache}",
              "-o", str(air)], check=True, env=environment)
         subprocess.run(
             [xcrun, "-sdk", "macosx", "metallib", str(air),

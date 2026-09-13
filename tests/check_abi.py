@@ -13,6 +13,13 @@ def main() -> None:
     library = Path(sys.argv[1])
     expected_path = Path(__file__).with_name("expected_abi_symbols.txt")
     expected = set(expected_path.read_text().split())
+    exports_path = Path(__file__).parents[1] / "src" / "libttl.exports"
+    declared = set(exports_path.read_text().split())
+    if declared != expected:
+        missing = sorted(expected - declared)
+        extra = sorted(declared - expected)
+        raise SystemExit(
+            f"TTL export control mismatch: missing={missing}, extra={extra}")
     command = (["nm", "-gU", str(library)] if platform.system() == "Darwin"
                else ["nm", "-D", "--defined-only", str(library)])
     completed = subprocess.run(
@@ -22,7 +29,7 @@ def main() -> None:
         line.split()[-1].split("@@", 1)[0].removeprefix("_")
         for line in completed.stdout.splitlines() if line.split()
     ]
-    actual = {symbol for symbol in symbols if symbol.startswith("ttl_")}
+    actual = set(symbols)
     if actual != expected:
         missing = sorted(expected - actual)
         extra = sorted(actual - expected)

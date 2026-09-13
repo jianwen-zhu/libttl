@@ -1,10 +1,9 @@
 # Proposed TTL group API
 
-Status: non-normative design note; not part of the implemented public API or
-the student learning sequence.
+Status: non-normative design note; not part of the implemented public API.
 
-This document defines an additive SPMD collective layer for TTL. It does not
-change `ttl.h`, `ttl_module.h`, tensor ownership, or the fixed local kernel
+This document proposes an additive SPMD collective layer for TTL. It would
+extend `libttl.h` without changing tensor ownership or the fixed local kernel
 launch envelope.
 
 The central abstraction is:
@@ -23,7 +22,7 @@ launcher / topology policy / bootstrap transport
     world rank, node rank, TP/DP/EP/CP membership, ID exchange
                               |
                               v
-ttl_group.h
+libttl.h
     device-bound group rank, collectives, asynchronous completion
                               |
                               v

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "name": "smoke.identity-chain",
+  "inputs": [
+    {"name": "x", "dtype": "float32", "shape": [64]}
+  ],
+  "outputs": [
+    {"name": "y", "dtype": "float32", "shape": [64]}
+  ],
+  "calls": [
+    {"function": "identity", "arguments": ["x"], "results": ["temporary"]},
+    {"function": "identity", "arguments": ["temporary"], "results": ["y"]}
+  ]
+}

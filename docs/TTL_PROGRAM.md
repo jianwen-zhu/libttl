@@ -1,8 +1,8 @@
 # TTL program format, version 1
 
 A TTL program describes a pure, static directed acyclic graph of final device
-functions. A human-authored teaching program is normally small enough to
-review directly. A compiler-emitted program may instead contain an entire
+functions. A human-authored program is normally small enough to review
+directly. A compiler-emitted program may instead contain an entire
 flattened model, including statically unrolled repeated structure. Program
 size is not a semantic distinction. A compiler has already made fusion,
 tiling, specialization, and scheduling decisions before emitting its final
@@ -23,11 +23,10 @@ describes one final function signature, while `launch.json` and the native
 artifact are backend-specific compiler products. Host applications load only
 the program directory and do not enumerate those packages.
 
-A program is analogous to a C function and may be used at either boundary. The
-current handwritten EinyGPT example loads one transformer-layer program and
-repeats it from C because that organization makes the layer structure easy to
-teach. A compiler consuming a flattened TTL export may emit the complete
-unrolled DAG as one program without changing this format.
+A program is analogous to a C function and may be used at either boundary. An
+application may load a reusable subroutine and invoke it repeatedly, while a
+compiler consuming a flattened export may emit the complete unrolled DAG as
+one program. Both use the same format.
 
 The normative structure is
 [`schema/ttl-program-v1.schema.json`](../schema/ttl-program-v1.schema.json).
@@ -112,7 +111,7 @@ a compiler may statically unroll the same composition into a larger DAG. Both
 forms have identical program semantics. The choice belongs to the producer,
 not the backend.
 
-The checked-in TileLang reference programs use the same directories that a
-future `ttl-ttl` compiler must emit: pure DAGs plus final device functions.
-Different backends may package different native functions for the same source
-program, while the C harness and program API remain unchanged.
+Every program producer emits the same structure: a pure DAG plus packaged final
+device functions. Different backends may package different native functions for
+the same source program, while the host application and program API remain
+unchanged.

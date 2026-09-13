@@ -55,7 +55,7 @@ def curate_trace(
         "TTL selected TileLang lowering checkpoints",
         "",
         "The complete compiler pipeline ran. This directory contains only the",
-        "pass boundaries selected by the 04_watch lab.",
+        "pass boundaries selected by the requested trace-pass list.",
         "",
     ]
 

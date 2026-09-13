@@ -1,8 +1,0 @@
-{
-  "schema_version": 1,
-  "name": "test.dynamic-workgroup-memory",
-  "kernel": {"name": "noop"},
-  "tensors": [],
-  "scalars": [],
-  "arguments": []
-}

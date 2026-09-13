@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: libttl
+Description: Tiny Tensor Library C API
+Version: @VERSION@
+Libs: -L${libdir} -lttl
+Cflags: -I${includedir}

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "name": "smoke.dynamic-workgroup-memory",
+  "kernel": {"name": "dynamic_noop"},
+  "tensors": [],
+  "scalars": [],
+  "arguments": []
+}

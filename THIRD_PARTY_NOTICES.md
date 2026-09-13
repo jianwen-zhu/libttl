@@ -1,5 +1,12 @@
 # Third-party notices
 
+## PyTorch and LibTorch
+
+The CUDA and MPS implementations dynamically link against the PyTorch
+installation selected at build time. libttl does not redistribute PyTorch or
+its bundled third-party components. The selected PyTorch distribution provides
+its applicable license files and notices.
+
 ## jsoncons
 
 libttl uses the header-only jsoncons 1.9.0 library for JSON parsing and JSON
@@ -30,4 +37,3 @@ SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR
 ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
-

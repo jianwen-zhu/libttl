@@ -26,6 +26,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -175,12 +176,10 @@ struct ttl_kernel {
 #if defined(TTL_LIBTORCH_CUDA)
     ttl_kernel(module_spec spec, CUmodule module, CUfunction function,
                c10::DeviceIndex device_index,
-               std::vector<at::Tensor> scalar_storage,
-               std::vector<at::Tensor> scalar_host_storage)
+               std::vector<at::Tensor> scalar_storage)
         : spec(std::move(spec)), module(module), function(function),
           device_index(device_index),
-          scalar_storage(std::move(scalar_storage)),
-          scalar_host_storage(std::move(scalar_host_storage)) {}
+          scalar_storage(std::move(scalar_storage)) {}
     ~ttl_kernel() {
         if (module != nullptr) cuModuleUnload(module);
     }
@@ -189,7 +188,9 @@ struct ttl_kernel {
     CUfunction function;
     c10::DeviceIndex device_index;
     std::vector<at::Tensor> scalar_storage;
-    std::vector<at::Tensor> scalar_host_storage;
+    c10::cuda::CUDAEvent scalar_staging_event{cudaEventDisableTiming};
+    bool scalar_staging_active = false;
+    std::mutex scalar_staging_mutex;
 #else
     ttl_kernel(module_spec spec,
                std::unique_ptr<at::native::mps::PrecompiledMetalShaderLibrary> library,
@@ -882,7 +883,7 @@ ttl_status_t ttl_close(
             if (relative_error > result->max_relative_error) {
                 result->max_relative_error = relative_error;
             }
-            const bool close = absolute_error <=
+            const bool close = a == r || absolute_error <=
                 absolute_tolerance + relative_tolerance * std::abs(r);
             if (!close) {
                 result->is_close = false;
@@ -1105,18 +1106,14 @@ ttl_status_t ttl_kernel_prepare(
                 }
             }
             std::vector<at::Tensor> scalar_storage(module->spec.scalars.size());
-            std::vector<at::Tensor> scalar_host_storage(module->spec.scalars.size());
             for (size_t i = 0; i < needs_device_scalar.size(); ++i) {
                 if (!needs_device_scalar[i]) continue;
                 scalar_storage[i] = at::empty(
                     {4}, at::TensorOptions().dtype(at::kByte).device(device->value));
-                scalar_host_storage[i] = at::empty(
-                    {4}, at::TensorOptions().dtype(at::kByte).device(at::kCPU)
-                             .pinned_memory(true));
             }
             *kernel = new ttl_kernel(
                 module->spec, native_module, function, device->value.index(),
-                std::move(scalar_storage), std::move(scalar_host_storage));
+                std::move(scalar_storage));
             native_module = nullptr;
         } catch (...) {
             if (native_module != nullptr) cuModuleUnload(native_module);
@@ -1233,21 +1230,38 @@ ttl_status_t ttl_kernel_launch(
 #if defined(TTL_LIBTORCH_CUDA)
         const CUstream native_stream =
             reinterpret_cast<CUstream>(stream->value.stream());
+        const bool has_device_scalar = std::any_of(
+            specification.arguments.begin(), specification.arguments.end(),
+            [](const argument_spec &argument) {
+                return argument.kind == argument_kind::scalar_device;
+            });
+        std::unique_lock<std::mutex> staging_lock(
+            kernel->scalar_staging_mutex, std::defer_lock);
+        if (has_device_scalar) {
+            // Device-scalar storage belongs to the prepared kernel. Order its
+            // reuse after the preceding launch, even when callers alternate
+            // streams. A device fill also avoids an asynchronous host-buffer
+            // lifetime.
+            staging_lock.lock();
+            if (kernel->scalar_staging_active) {
+                kernel->scalar_staging_event.block(stream->value);
+            }
+        }
         for (const auto &argument : specification.arguments) {
             if (argument.kind != argument_kind::scalar_device) continue;
             const size_t index = argument.index;
-            void *host = kernel->scalar_host_storage[index].mutable_data_ptr();
+            unsigned int value = 0;
             if (scalars[index].dtype == TTL_DTYPE_INT32) {
-                std::memcpy(host, &scalars[index].value.int32, sizeof(int32_t));
+                std::memcpy(&value, &scalars[index].value.int32, sizeof(value));
             } else {
-                std::memcpy(host, &scalars[index].value.float32, sizeof(float));
+                std::memcpy(&value, &scalars[index].value.float32, sizeof(value));
             }
             check_cuda(
-                cuMemcpyHtoDAsync(
+                cuMemsetD32Async(
                     reinterpret_cast<CUdeviceptr>(
                         kernel->scalar_storage[index].mutable_data_ptr()),
-                    host, 4, native_stream),
-                "cuMemcpyHtoDAsync");
+                    value, 1, native_stream),
+                "cuMemsetD32Async");
         }
 
         std::vector<std::array<unsigned char, 8>> values(
@@ -1284,6 +1298,10 @@ ttl_status_t ttl_kernel_launch(
                 specification.shared_bytes, native_stream,
                 parameters.data(), nullptr),
             "cuLaunchKernel");
+        if (has_device_scalar) {
+            kernel->scalar_staging_event.record(stream->value);
+            kernel->scalar_staging_active = true;
+        }
 #else
         for (const auto &argument : specification.arguments) {
             if (argument.kind != argument_kind::scalar_device) continue;

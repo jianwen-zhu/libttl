@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "name": "smoke.scalar-device-stress",
+  "kernel": {"name": "scalar_device_stress"},
+  "tensors": [
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [1]}
+  ],
+  "scalars": [
+    {"name": "value", "dtype": "float32"}
+  ],
+  "arguments": [
+    {"parameter": "output", "kind": "tensor", "name": "output"},
+    {"parameter": "value", "kind": "scalar_device", "name": "value"}
+  ]
+}
