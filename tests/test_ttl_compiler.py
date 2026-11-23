@@ -182,7 +182,7 @@ class CompilerCliTest(unittest.TestCase):
                 for flag in ("--source", "--manifest", "--output", "--arch"):
                     self.assertIn(flag, help_text)
                 version = self.run_tool(tool, "--version")
-                self.assertIn("0.1.0", version)
+                self.assertIn("0.1.1", version)
                 self.assertIn("compiler interface 1", version)
 
 

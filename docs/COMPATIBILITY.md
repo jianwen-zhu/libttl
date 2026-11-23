@@ -30,6 +30,7 @@ tested configurations, not a restriction on other compatible systems.
 | --- | --- | --- | --- | --- |
 | 2026-09-13 | `libtorch_cuda` | NVIDIA T4 on CloudMake | CloudMake CUDA/PyTorch image | Complete backend release checks passed; provenance `d0bc345cc5bc46c087017f7d2923c3ac` |
 | 2026-09-13 | `libtorch_mps` | Apple M3 Pro | macOS 26.0.1, Xcode 26.3, Python 3.13.7, PyTorch 2.13.0 | Complete clean-source and backend release checks passed |
+| 2026-11-23 | `libtorch_mps` | Apple M3 Pro | macOS 26.0.1, Xcode 26.3, Python 3.13.7, PyTorch 2.13.0, TileLang 0.1.13 | Complete archive, backend, assertion, and downstream course qualification passed for 0.1.1 |
 
 Future releases should update this table with their actual validation profiles
 instead of treating these versions as permanent minimums or maximums.

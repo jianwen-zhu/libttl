@@ -3,7 +3,7 @@
 This file records user-visible changes to libttl. The C API and each JSON
 contract carry their own compatibility versions.
 
-## Unreleased
+## 0.1.1 - 2026-11-23
 
 - Preserved TileLang 0.1.13 bounds and domain assertions in Metal packages,
   with fail-closed lowering and asynchronous error reporting at the existing
