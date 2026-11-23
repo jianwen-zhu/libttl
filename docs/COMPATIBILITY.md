@@ -23,6 +23,9 @@ compatibility boundary for generated code, not additions to the public C API.
 The CUDA packager recognizes the same generated assertion shape and lowers it
 to CUDA's native device assertion. The assertion is reported when the stream is
 synchronized. Unknown host-error shapes are rejected rather than removed.
+For TileLang CUDA packages, dynamic shared-memory bytes are extracted from the
+matching lowered device function instead of being recomputed from kernel
+shapes. Raw CUDA packages remain responsible for their authored launch value.
 
 jsoncons 1.9.0 is the only additional C++ dependency. `make bootstrap`
 installs its checksum-pinned headers outside the checkout.

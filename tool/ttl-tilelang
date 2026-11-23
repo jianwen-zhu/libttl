@@ -15,8 +15,10 @@ import tempfile
 from pathlib import Path
 
 from ttl_compiler import (
-    add_common_arguments, emit_cuda_module, emit_metal_module, require,
+    add_common_arguments, emit_cuda_module, emit_metal_module, load_manifest,
+    require,
 )
+from tilelang_metadata import cuda_launch_from_device_ir
 
 
 def tilelang_include_paths(tilelang_module) -> list[Path]:
@@ -176,12 +178,18 @@ def main() -> None:
         if backend == "libtorch_cuda":
             native_source = Path(temporary) / "kernel.cu"
             native_source.write_text(native_source_text)
+            manifest = load_manifest(args.manifest)
+            cuda_launch = cuda_launch_from_device_ir(
+                lowered.device_mod,
+                entrypoint=symbol,
+                manifest_symbol=manifest["kernel"]["name"],
+                authored_launch=launch)
             emit_cuda_module(
                 source=native_source, manifest_path=args.manifest,
                 output=args.output, arch=args.arch,
                 compiler_name="ttl-tilelang",
                 includes=tilelang_include_paths(tilelang),
-                nvcc_args=["-diag-suppress=20012"], launch=launch,
+                nvcc_args=["-diag-suppress=20012"], launch=cuda_launch,
                 tilelang_assertions=True, cxx_standard="c++20")
         else:
             native_source = Path(temporary) / "kernel.metal"

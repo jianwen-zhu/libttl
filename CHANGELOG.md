@@ -9,6 +9,8 @@ contract carry their own compatibility versions.
   PyTorch 2.14 headers while keeping the shared contract checker independent.
 - Preserve supported TileLang CUDA assertions before native compilation and
   reject inconsistent dynamic shared-memory launch metadata.
+- Derive TileLang CUDA dynamic shared-memory bytes from the selected lowered
+  device function while retaining authored launch metadata for raw CUDA.
 
 ## 0.1.1 - 2026-11-23
 

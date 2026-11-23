@@ -58,8 +58,11 @@ The TileLang packager requests lowered native source without asking TileLang
 to compile it first. This lets the shared packager validate the native
 signature and launch metadata, preserve supported generated assertions, and
 perform one authoritative native compilation. CUDA source that declares
-dynamic shared memory must have a nonzero `shared_bytes` launch value; a
-presence mismatch is rejected instead of launching with an empty allocation.
+dynamic shared memory receives its `shared_bytes` value from the matching
+lowered TileLang device function. An authored zero is a compatible placeholder;
+an authored nonzero value must equal TileLang's allocation. Missing, ambiguous,
+symbolic, negative, or oversized lowered allocations are rejected. The native
+source is checked against that derived launch value before compilation.
 
 For the MPS profile, `ttl-tilelang` also preserves the single-message
 `RuntimeError` assertion form emitted by TileLang 0.1.13. The packager lowers
