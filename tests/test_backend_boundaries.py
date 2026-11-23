@@ -26,6 +26,13 @@ class BackendBoundaryTest(unittest.TestCase):
         self.assertNotIn("torch_flags.py", common_makefile)
         self.assertIn("backend_libtorch_impl.inc", libtorch_makefile)
         self.assertIn("torch_flags.py", libtorch_makefile)
+        self.assertIn("BACKEND_CXX_STANDARD ?= c++17", common_makefile)
+        self.assertIn("-std=$(BACKEND_CXX_STANDARD)", common_makefile)
+        self.assertIn("BACKEND_CXX_STANDARD := c++20", libtorch_makefile)
+
+    def test_contract_checker_retains_backend_independent_standard(self):
+        common_makefile = (ROOT / "src" / "Makefile").read_text()
+        self.assertIn("$(CXX) -std=c++17 -O2 -Wall -Wextra", common_makefile)
 
 
 if __name__ == "__main__":

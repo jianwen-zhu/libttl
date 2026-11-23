@@ -15,6 +15,7 @@ BACKEND_CONFIG := $(firstword $(wildcard \
 BACKEND_SUPPORT_FILES :=
 BACKEND_COMPILE_FLAGS_COMMAND := :
 BACKEND_LINK_FLAGS_COMMAND := :
+BACKEND_CXX_STANDARD ?= c++17
 -include $(BACKEND_CONFIG)
 API_VERSION_MAJOR := $(shell awk \
 	'$$2 == "TTL_API_VERSION_MAJOR" { sub(/u$$/, "", $$3); print $$3 }' \
@@ -128,7 +129,7 @@ $(OUTPUT): Makefile $(BACKEND_CONFIG) $(SOURCE) $(BACKEND_SUPPORT_FILES) \
 	@set -eu; \
 	compile_flags="$$( $(BACKEND_COMPILE_FLAGS_COMMAND) )"; \
 	link_flags="$$( $(BACKEND_LINK_FLAGS_COMMAND) )"; \
-	$(CXX) -std=c++17 -O2 -fPIC -Wall -Wextra \
+	$(CXX) -std=$(BACKEND_CXX_STANDARD) -O2 -fPIC -Wall -Wextra \
 		-I../include -I'$(JSONCONS_INCLUDE_DIR)' \
 		-I'$(dir $(MODULE_SCHEMA_HEADER))' $$compile_flags -shared \
 		$(SOURCE) $(MANIFEST_SOURCE) -o $(OUTPUT) \

@@ -3,6 +3,11 @@
 This file records user-visible changes to libttl. The C API and each JSON
 contract carry their own compatibility versions.
 
+## Unreleased
+
+- Build LibTorch-backed implementations as C++20 for compatibility with
+  PyTorch 2.14 headers while keeping the shared contract checker independent.
+
 ## 0.1.1 - 2026-11-23
 
 - Preserved TileLang 0.1.13 bounds and domain assertions in Metal packages,
