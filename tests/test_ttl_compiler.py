@@ -116,6 +116,33 @@ void scale_kernel(
         launch = normalize_launch_configuration({"grid": [4], "block": [64]})
         self.assertEqual(launch["shared_bytes"], 0)
 
+    def test_cuda_dynamic_shared_memory_requires_launch_bytes(self):
+        manifest = {
+            "schema_version": 1,
+            "name": "test.shared",
+            "kernel": {"name": "shared_kernel"},
+            "tensors": [], "scalars": [], "arguments": [],
+        }
+        source_text = (
+            'extern "C" __global__ void shared_kernel() {\n'
+            '  extern __shared__ unsigned char dynamic[];\n'
+            '}\n')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "kernel.cu"
+            authored = root / "module.json"
+            source.write_text(source_text)
+            authored.write_text(json.dumps(manifest))
+            with mock.patch("ttl_compiler.load_manifest",
+                            return_value=manifest):
+                with self.assertRaisesRegex(ValueError, "shared-memory"):
+                    emit_cuda_module(
+                        source=source, manifest_path=authored,
+                        output=root / "out", arch="sm_75",
+                        compiler_name="test",
+                        launch={"grid": [1], "block": [1],
+                                "shared_bytes": 0})
+
     def test_checked_in_native_signatures_match_shared_manifests(self):
         for suffix, parser in (("*.cu", kernel_parameter_names),
                                ("*.metal", metal_parameter_names)):

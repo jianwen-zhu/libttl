@@ -223,6 +223,8 @@ def emit_cuda_module(
     compiler_name: str, includes: list[Path] | None = None,
     nvcc_args: list[str] | None = None,
     launch: dict[str, Any] | None = None,
+    tilelang_assertions: bool = False,
+    cxx_standard: str = "c++17",
 ) -> None:
     manifest = load_manifest(manifest_path)
     kernel = manifest["kernel"]
@@ -233,18 +235,40 @@ def emit_cuda_module(
     artifact_file = "kernel.cubin"
     signature, parameters = kernel_parameter_names(source_text, name)
     validate_arguments(manifest, parameters)
+    uses_dynamic_shared = re.search(
+        r"\bextern\s+__shared__\b", source_text) is not None
+    has_dynamic_launch = launch["shared_bytes"] > 0
+    require(
+        uses_dynamic_shared == has_dynamic_launch,
+        "CUDA dynamic shared-memory source and ttl-launch shared_bytes disagree")
+
+    compiled_source = source
+    temporary_source: tempfile.TemporaryDirectory[str] | None = None
+    if tilelang_assertions:
+        from cuda_assertions import lower_assertions
+
+        source_text, assertion_count = lower_assertions(source_text)
+        if assertion_count:
+            temporary_source = tempfile.TemporaryDirectory(
+                prefix="ttl-cuda-assertions-")
+            compiled_source = Path(temporary_source.name) / "kernel.cu"
+            compiled_source.write_text(source_text)
 
     output.mkdir(parents=True, exist_ok=True)
     artifact = output / artifact_file
     command = [
-        shutil.which("nvcc") or "nvcc", "-std=c++17", "-O2", "--cubin",
+        shutil.which("nvcc") or "nvcc", f"-std={cxx_standard}", "-O2", "--cubin",
         "-gencode", f"arch=compute_{arch.removeprefix('sm_')},code={arch}",
     ]
     for include in includes or []:
         command.extend(["-I", str(include)])
     command.extend(nvcc_args or [])
-    command.extend([str(source), "-o", str(artifact)])
-    subprocess.run(command, check=True)
+    command.extend([str(compiled_source), "-o", str(artifact)])
+    try:
+        subprocess.run(command, check=True)
+    finally:
+        if temporary_source is not None:
+            temporary_source.cleanup()
     copy_manifest(manifest_path, output)
     emit_private_launch(
         output=output, backend="libtorch_cuda", artifact_format="cubin",

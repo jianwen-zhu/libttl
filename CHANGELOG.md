@@ -7,6 +7,8 @@ contract carry their own compatibility versions.
 
 - Build LibTorch-backed implementations as C++20 for compatibility with
   PyTorch 2.14 headers while keeping the shared contract checker independent.
+- Preserve supported TileLang CUDA assertions before native compilation and
+  reject inconsistent dynamic shared-memory launch metadata.
 
 ## 0.1.1 - 2026-11-23
 

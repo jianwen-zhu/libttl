@@ -154,8 +154,18 @@ def main() -> None:
             if kernel is None:
                 raise ValueError(
                     f"TileLang source does not define {symbol!r}")
-            compiled = kernel.compile(**specializations)
-            native_source_text = compiled.get_kernel_source()
+            prim_func = kernel.get_tir(**specializations)
+            from tvm import transform as tvm_transform
+            from tvm.target import Target
+
+            native_target = Target(target)
+            with native_target, tvm_transform.PassContext(
+                    opt_level=3, config=kernel.pass_configs or {}):
+                lowered = tilelang.lower(
+                    prim_func, target=native_target,
+                    enable_host_codegen=False,
+                    enable_device_compile=False)
+            native_source_text = lowered.kernel_source
     except Exception:
         if trace_stdout is not None:
             print(trace_stdout.getvalue(), end="")
@@ -171,7 +181,8 @@ def main() -> None:
                 output=args.output, arch=args.arch,
                 compiler_name="ttl-tilelang",
                 includes=tilelang_include_paths(tilelang),
-                nvcc_args=["-diag-suppress=20012"], launch=launch)
+                nvcc_args=["-diag-suppress=20012"], launch=launch,
+                tilelang_assertions=True, cxx_standard="c++20")
         else:
             native_source = Path(temporary) / "kernel.metal"
             native_source.write_text(native_source_text)

@@ -20,6 +20,10 @@ barriers are rejected because per-thread early return would not be safe.
 Unrecognized assertion shapes are also rejected. These restrictions are a
 compatibility boundary for generated code, not additions to the public C API.
 
+The CUDA packager recognizes the same generated assertion shape and lowers it
+to CUDA's native device assertion. The assertion is reported when the stream is
+synchronized. Unknown host-error shapes are rejected rather than removed.
+
 jsoncons 1.9.0 is the only additional C++ dependency. `make bootstrap`
 installs its checksum-pinned headers outside the checkout.
 
