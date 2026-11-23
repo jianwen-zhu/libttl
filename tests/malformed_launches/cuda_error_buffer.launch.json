@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "backend": "libtorch_cuda",
+  "error_buffer_index": 2,
+  "artifact": {"format": "cubin", "file": "kernel.cubin"},
+  "kernel": {
+    "name": "checked_kernel",
+    "grid": [1],
+    "block": [1],
+    "shared_bytes": 0
+  }
+}

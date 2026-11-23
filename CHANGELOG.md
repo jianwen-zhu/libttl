@@ -3,6 +3,12 @@
 This file records user-visible changes to libttl. The C API and each JSON
 contract carry their own compatibility versions.
 
+## Unreleased
+
+- Preserved TileLang 0.1.13 bounds and domain assertions in Metal packages,
+  with fail-closed lowering and asynchronous error reporting at the existing
+  stream synchronization boundary. The public C API is unchanged.
+
 ## 0.1.0 - 2026-09-13
 
 - Introduced the opaque version 1.3 C API for tensors, devices, streams,

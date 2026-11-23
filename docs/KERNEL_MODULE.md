@@ -54,6 +54,13 @@ MSL buffer bindings and calls Apple's `metal` and `metallib` tools.
 backend and follows the corresponding emission path. Other compilers can
 produce the same directory contract.
 
+For the MPS profile, `ttl-tilelang` also preserves the single-message
+`RuntimeError` assertion form emitted by TileLang 0.1.13. The packager lowers
+that generated host-style error block to LibTorch's Metal error-buffer
+protocol. Unsupported assertion shapes are rejected instead of being compiled
+without their checks. This compatibility step is limited to generated TileLang
+source; `ttl-metal` continues to package ordinary MSL without rewriting it.
+
 ## Manifest layers
 
 The checked-in manifest states:
@@ -74,6 +81,11 @@ Native source keeps its launch choice beside the kernel in one JSON-valued
 `TTL_ENTRYPOINT`, `TTL_SPECIALIZATIONS`, and `TTL_LAUNCH` compiler inputs. Those
 producer details become generated `launch.json`; they never enter the portable
 manifest.
+
+An MPS launch may contain a private `error_buffer_index`. When present, it is
+the zero-based buffer binding immediately after all public native arguments.
+The runtime validates that position and binds its error buffer before launch.
+The field is absent for unchecked MPS kernels and all CUDA kernels.
 
 Tensor and scalar declarations have unique names, argument parameter names are
 unique, private artifact filenames cannot escape the module directory, and
@@ -97,6 +109,10 @@ symbol, and allocates any persistent device-scalar staging.
 `ttl_kernel_launch` validates the public tensor/scalar envelope, constructs
 native launch arguments, and enqueues the kernel on the supplied opaque
 stream. Compilation, file loading, and allocation do not occur during launch.
+Metal assertion failures are asynchronous: a checked launch still enqueues
+successfully, and the backend error is returned by the next
+`ttl_stream_synchronize` for that stream. The diagnostic includes the
+generated assertion message.
 
 The caller synchronizes dependent work before destroying tensors or prepared
 kernels still in use.

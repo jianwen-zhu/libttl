@@ -106,6 +106,7 @@ struct module_spec {
     std::array<unsigned int, 3> grid{};
     std::array<unsigned int, 3> block{};
     unsigned int shared_bytes = 0;
+    int error_buffer_index = -1;
     std::string artifact_file;
     std::vector<tensor_spec> tensors;
     std::vector<scalar_spec> scalars;
@@ -521,6 +522,20 @@ module_spec parse_manifest(const std::filesystem::path &path) {
             }
         }
         result.arguments.push_back(spec);
+    }
+    if (launch.contains("error_buffer_index")) {
+#if defined(TTL_LIBTORCH_CUDA)
+        throw std::invalid_argument(
+            "Metal error buffer is not a CUDA launch feature");
+#else
+        result.error_buffer_index =
+            launch.at("error_buffer_index").as<int>();
+        if (static_cast<size_t>(result.error_buffer_index) !=
+            result.arguments.size()) {
+            throw std::invalid_argument(
+                "error buffer must follow all public arguments");
+        }
+#endif
     }
     return result;
 }
@@ -1320,6 +1335,11 @@ ttl_status_t ttl_kernel_launch(
 
         kernel->function->runCommandBlock([&] {
             kernel->function->startEncoding();
+            if (specification.error_buffer_index >= 0) {
+                kernel->function->setErrorBufferIndex(
+                    static_cast<unsigned int>(
+                        specification.error_buffer_index));
+            }
             for (size_t i = 0; i < specification.arguments.size(); ++i) {
                 const auto &argument = specification.arguments[i];
                 if (argument.kind == argument_kind::tensor) {

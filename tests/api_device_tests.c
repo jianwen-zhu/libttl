@@ -49,6 +49,7 @@ static void check_malformed_modules(const char *root) {
         "duplicate_tensor",
         "unknown_binding",
         "artifact_traversal",
+        "error_buffer_position",
     };
     char path[4096];
     for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
@@ -501,11 +502,130 @@ static void check_scalar_device_stress(
 }
 #endif
 
+#if defined(TTL_TEST_MPS)
+static void expect_async_error(
+    ttl_stream_t *stream, const char *message_fragment) {
+    const ttl_status_t status = ttl_stream_synchronize(stream);
+    if (status != TTL_STATUS_BACKEND_ERROR) {
+        fprintf(stderr,
+                "%s:%d: stream synchronization returned %d, expected %d: %s\n",
+                __FILE__, __LINE__, (int)status, (int)TTL_STATUS_BACKEND_ERROR,
+                ttl_last_error());
+        ++failures;
+        return;
+    }
+    CHECK(strstr(ttl_last_error(), message_fragment) != NULL);
+}
+
+static void check_domain_assertion(
+    const char *module_path, ttl_device_t *device, ttl_stream_t *stream) {
+    const int64_t shape[] = {1};
+    ttl_module_t *module = NULL;
+    ttl_kernel_t *kernel = NULL;
+    ttl_tensor_t *input = NULL;
+    ttl_tensor_t *output = NULL;
+    ttl_tensor_t *tensors[2];
+    float value = 2.0f;
+    float result = 0.0f;
+
+    EXPECT_OK(ttl_module_load(module_path, &module));
+    EXPECT_OK(ttl_kernel_prepare(module, device, &kernel));
+    ttl_module_destroy(module);
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 1, shape, &input));
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 1, shape, &output));
+    tensors[0] = input;
+    tensors[1] = output;
+
+    EXPECT_OK(ttl_tensor_write(input, &value, sizeof(value)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 2, NULL, 0, stream));
+    EXPECT_OK(ttl_stream_synchronize(stream));
+    EXPECT_OK(ttl_tensor_read(output, &result, sizeof(result)));
+    CHECK(result == 0.5f);
+
+    value = 0.0f;
+    EXPECT_OK(ttl_tensor_write(input, &value, sizeof(value)));
+    /* The assertion is queued successfully and reported at synchronization. */
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 2, NULL, 0, stream));
+    expect_async_error(stream, "division by zero");
+
+    value = 4.0f;
+    EXPECT_OK(ttl_tensor_write(input, &value, sizeof(value)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 2, NULL, 0, stream));
+    EXPECT_OK(ttl_stream_synchronize(stream));
+    EXPECT_OK(ttl_tensor_read(output, &result, sizeof(result)));
+    CHECK(result == 0.25f);
+
+    ttl_tensor_destroy(output);
+    ttl_tensor_destroy(input);
+    ttl_kernel_destroy(kernel);
+}
+
+static void check_bounds_assertion(
+    const char *module_path, ttl_device_t *device, ttl_stream_t *stream) {
+    const int64_t table_shape[] = {4};
+    const int64_t scalar_shape[] = {1};
+    const float table_values[] = {10.0f, 20.0f, 30.0f, 40.0f};
+    ttl_module_t *module = NULL;
+    ttl_kernel_t *kernel = NULL;
+    ttl_tensor_t *table = NULL;
+    ttl_tensor_t *index = NULL;
+    ttl_tensor_t *output = NULL;
+    ttl_tensor_t *tensors[3];
+    int32_t selected = 2;
+    float result = 0.0f;
+
+    EXPECT_OK(ttl_module_load(module_path, &module));
+    EXPECT_OK(ttl_kernel_prepare(module, device, &kernel));
+    ttl_module_destroy(module);
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 1, table_shape, &table));
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_INT32, 1, scalar_shape, &index));
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 1, scalar_shape, &output));
+    tensors[0] = table;
+    tensors[1] = index;
+    tensors[2] = output;
+    EXPECT_OK(ttl_tensor_write(table, table_values, sizeof(table_values)));
+
+    EXPECT_OK(ttl_tensor_write(index, &selected, sizeof(selected)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 3, NULL, 0, stream));
+    EXPECT_OK(ttl_stream_synchronize(stream));
+    EXPECT_OK(ttl_tensor_read(output, &result, sizeof(result)));
+    CHECK(result == 30.0f);
+
+    selected = -1;
+    EXPECT_OK(ttl_tensor_write(index, &selected, sizeof(selected)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 3, NULL, 0, stream));
+    expect_async_error(stream, "gather index out of bounds");
+
+    selected = 4;
+    EXPECT_OK(ttl_tensor_write(index, &selected, sizeof(selected)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 3, NULL, 0, stream));
+    expect_async_error(stream, "gather index out of bounds");
+
+    selected = 1;
+    EXPECT_OK(ttl_tensor_write(index, &selected, sizeof(selected)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 3, NULL, 0, stream));
+    EXPECT_OK(ttl_stream_synchronize(stream));
+    EXPECT_OK(ttl_tensor_read(output, &result, sizeof(result)));
+    CHECK(result == 20.0f);
+
+    ttl_tensor_destroy(output);
+    ttl_tensor_destroy(index);
+    ttl_tensor_destroy(table);
+    ttl_kernel_destroy(kernel);
+}
+#endif
+
 int main(int argc, char **argv) {
-    if (argc != 7) {
+    if (argc != 9) {
         fprintf(stderr,
                 "usage: %s MALFORMED_MODULES MALFORMED_PROGRAMS "
-                "BINDING_MODULE DYNAMIC_MODULE PROGRAM SCALAR_STRESS\n",
+                "BINDING_MODULE DYNAMIC_MODULE PROGRAM SCALAR_STRESS "
+                "ASSERT_DOMAIN ASSERT_BOUNDS\n",
                 argv[0]);
         return 2;
     }
@@ -542,6 +662,9 @@ int main(int argc, char **argv) {
     check_program(argv[5], argv[2], device, first);
 #if defined(TTL_TEST_CUDA)
     check_scalar_device_stress(argv[6], device, first, second);
+#else
+    check_domain_assertion(argv[7], device, first);
+    check_bounds_assertion(argv[8], device, first);
 #endif
 
     EXPECT_OK(ttl_stream_synchronize(first));

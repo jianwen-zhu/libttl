@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "assert.bounds",
+  "kernel": {"name": "assert_bounds_kernel"},
+  "tensors": [
+    {"name": "table", "dtype": "float32", "access": "read", "shape": [4]},
+    {"name": "index", "dtype": "int32", "access": "read", "shape": [1]},
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [1]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "table", "kind": "tensor", "name": "table"},
+    {"parameter": "index", "kind": "tensor", "name": "index"},
+    {"parameter": "output", "kind": "tensor", "name": "output"}
+  ]
+}

@@ -112,7 +112,7 @@ static-check:
 		$(PYTHON) -m json.tool "$$document" >/dev/null || exit; \
 	done
 	@PYTHONPYCACHEPREFIX=/tmp/libttl-pycache $(PYTHON) -m py_compile \
-		tool/ttl_compiler.py tool/ttl-cuda tool/ttl-metal tool/ttl-tilelang \
+		tool/ttl_compiler.py tool/metal_assertions.py tool/ttl-cuda tool/ttl-metal tool/ttl-tilelang \
 		tool/torch_flags.py tool/embed_schema.py scripts/install_jsoncons.py
 	@$(CC) -std=c11 -Wall -Wextra -Wpedantic -Werror \
 		-Iinclude -fsyntax-only examples/host_compare.c

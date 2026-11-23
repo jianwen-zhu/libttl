@@ -12,6 +12,8 @@ VALID_MANIFESTS := $(wildcard fixtures/*/02_device/module.json) \
 VALID_FIXTURES := fixtures/minimal.fixture.json fixtures/semantic.fixture.json \
 	fixtures/identity.fixture.json
 MALFORMED_FIXTURES := $(wildcard malformed_fixtures/*.fixture.json)
+VALID_LAUNCHES := $(wildcard launches/*.launch.json)
+MALFORMED_LAUNCHES := $(wildcard malformed_launches/*.launch.json)
 ifeq ($(TTL_BACKEND),libtorch_cuda)
 BACKEND_DEFINE := -DTTL_TEST_CUDA=1
 PACKAGER := ../tool/ttl-cuda
@@ -36,20 +38,30 @@ BINDING_MODULE := $(SMOKE_BUILD_ROOT)/binding
 IDENTITY_MODULE := $(SMOKE_BUILD_ROOT)/identity
 DYNAMIC_MODULE := $(SMOKE_BUILD_ROOT)/dynamic
 SCALAR_STRESS_MODULE := $(SMOKE_BUILD_ROOT)/scalar_stress
+ASSERT_DOMAIN_MODULE := $(SMOKE_BUILD_ROOT)/assert_domain
+ASSERT_BOUNDS_MODULE := $(SMOKE_BUILD_ROOT)/assert_bounds
 SMOKE_PROGRAM := $(SMOKE_BUILD_ROOT)/program
 BINDING_STAMP := $(BINDING_MODULE)/.built
 IDENTITY_STAMP := $(IDENTITY_MODULE)/.built
 DYNAMIC_STAMP := $(DYNAMIC_MODULE)/.built
 PROGRAM_STAMP := $(SMOKE_PROGRAM)/.built
+ASSERT_DOMAIN_STAMP := $(ASSERT_DOMAIN_MODULE)/.built
+ASSERT_BOUNDS_STAMP := $(ASSERT_BOUNDS_MODULE)/.built
 ifeq ($(TTL_BACKEND),libtorch_cuda)
 SCALAR_STRESS_STAMP := $(SCALAR_STRESS_MODULE)/.built
 SCALAR_STRESS_ARGUMENT := $(SCALAR_STRESS_MODULE)
+ASSERTION_STAMPS :=
+ASSERT_DOMAIN_ARGUMENT := -
+ASSERT_BOUNDS_ARGUMENT := -
 else
 SCALAR_STRESS_STAMP :=
 SCALAR_STRESS_ARGUMENT := -
+ASSERTION_STAMPS := $(ASSERT_DOMAIN_STAMP) $(ASSERT_BOUNDS_STAMP)
+ASSERT_DOMAIN_ARGUMENT := $(ASSERT_DOMAIN_MODULE)
+ASSERT_BOUNDS_ARGUMENT := $(ASSERT_BOUNDS_MODULE)
 endif
 SMOKE_STAMPS := $(BINDING_STAMP) $(IDENTITY_STAMP) $(DYNAMIC_STAMP) \
-	$(PROGRAM_STAMP) $(SCALAR_STRESS_STAMP)
+	$(PROGRAM_STAMP) $(SCALAR_STRESS_STAMP) $(ASSERTION_STAMPS)
 
 .PHONY: all schema host run abi
 
@@ -85,6 +97,15 @@ schema: $(CONTRACT_CHECKER)
 	@for program in malformed_programs/*/program.json; do \
 		if $(CONTRACT_CHECKER) --program "$$program" >/dev/null 2>&1; then \
 			echo "shared validator unexpectedly accepted $$program" >&2; \
+			exit 1; \
+		fi; \
+	done
+	@for launch in $(VALID_LAUNCHES); do \
+		$(CONTRACT_CHECKER) --launch "$$launch" || exit; \
+	done
+	@for launch in $(MALFORMED_LAUNCHES); do \
+		if $(CONTRACT_CHECKER) --launch "$$launch" >/dev/null 2>&1; then \
+			echo "shared validator unexpectedly accepted $$launch" >&2; \
 			exit 1; \
 		fi; \
 	done
@@ -145,13 +166,36 @@ $(SCALAR_STRESS_STAMP): smoke/scalar_stress/module.json \
 	@touch '$@'
 endif
 
+ifeq ($(TTL_BACKEND),libtorch_mps)
+$(ASSERT_DOMAIN_STAMP): smoke/assert_domain/module.json \
+		smoke/assert_domain/kernel.metal package_metal_assertion.py \
+		../tool/metal_assertions.py ../tool/ttl_compiler.py $(CONTRACT_CHECKER)
+	@TTL_CONTRACT_CHECKER='$(CONTRACT_CHECKER)' \
+		PYTHONDONTWRITEBYTECODE=1 $(PYTHON) package_metal_assertion.py \
+		--source smoke/assert_domain/kernel.metal \
+		--manifest smoke/assert_domain/module.json \
+		--output '$(ASSERT_DOMAIN_MODULE)'
+	@touch '$@'
+
+$(ASSERT_BOUNDS_STAMP): smoke/assert_bounds/module.json \
+		smoke/assert_bounds/kernel.metal package_metal_assertion.py \
+		../tool/metal_assertions.py ../tool/ttl_compiler.py $(CONTRACT_CHECKER)
+	@TTL_CONTRACT_CHECKER='$(CONTRACT_CHECKER)' \
+		PYTHONDONTWRITEBYTECODE=1 $(PYTHON) package_metal_assertion.py \
+		--source smoke/assert_bounds/kernel.metal \
+		--manifest smoke/assert_bounds/module.json \
+		--output '$(ASSERT_BOUNDS_MODULE)'
+	@touch '$@'
+endif
+
 host: $(HOST_TEST)
 	@$(HOST_TEST)
 
 run: $(DEVICE_TEST) $(SMOKE_STAMPS)
 	@$(DEVICE_TEST) malformed_modules malformed_programs \
 		'$(BINDING_MODULE)' '$(DYNAMIC_MODULE)' '$(SMOKE_PROGRAM)' \
-		'$(SCALAR_STRESS_ARGUMENT)'
+		'$(SCALAR_STRESS_ARGUMENT)' '$(ASSERT_DOMAIN_ARGUMENT)' \
+		'$(ASSERT_BOUNDS_ARGUMENT)'
 
 abi: $(TTL_LIBRARY_DIR)/libttl.so
 	@$(PYTHON) check_abi.py $(TTL_LIBRARY_DIR)/libttl.so

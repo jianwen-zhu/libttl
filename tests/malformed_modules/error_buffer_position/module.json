@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "name": "bad.error-buffer-position",
+  "kernel": {"name": "noop"},
+  "tensors": [
+    {"name": "input", "dtype": "float32", "access": "read", "shape": [1]},
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [1]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "input", "kind": "tensor", "name": "input"},
+    {"parameter": "output", "kind": "tensor", "name": "output"}
+  ]
+}

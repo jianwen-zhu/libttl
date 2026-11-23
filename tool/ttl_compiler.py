@@ -197,6 +197,7 @@ def metal_parameter_names(source: str, name: str) -> tuple[str, list[str]]:
 def emit_private_launch(
     *, output: Path, backend: str, artifact_format: str,
     artifact_file: str, kernel_name: str, launch: dict[str, Any],
+    error_buffer_index: int | None = None,
 ) -> None:
     private = {
         "schema_version": 1,
@@ -204,6 +205,8 @@ def emit_private_launch(
         "artifact": {"format": artifact_format, "file": artifact_file},
         "kernel": {"name": kernel_name, **launch},
     }
+    if error_buffer_index is not None:
+        private["error_buffer_index"] = error_buffer_index
     path = output / "launch.json"
     path.write_text(json.dumps(private, indent=2) + "\n")
     run_checker(["--launch", str(path)], "private launch description")
@@ -254,6 +257,7 @@ def emit_metal_module(
     *, source: Path, manifest_path: Path, output: Path,
     compiler_name: str = "ttl-metal",
     launch: dict[str, Any] | None = None,
+    tilelang_assertions: bool = False,
 ) -> None:
     manifest = load_manifest(manifest_path)
     name = manifest["kernel"]["name"]
@@ -262,6 +266,22 @@ def emit_metal_module(
               else source_launch_configuration(source_text))
     signature, parameters = metal_parameter_names(source_text, name)
     validate_arguments(manifest, parameters)
+
+    error_buffer_index = None
+    include_arguments: list[str] = []
+    if tilelang_assertions:
+        from metal_assertions import lower_assertions
+
+        source_text, error_buffer_index = lower_assertions(
+            source_text, name, len(parameters))
+        if error_buffer_index is not None:
+            import torch
+
+            torch_include = Path(torch.__file__).resolve().parent / "include"
+            require(
+                (torch_include / "c10/metal/error.h").is_file(),
+                "LibTorch Metal error support is required for checked kernels")
+            include_arguments = ["-I", str(torch_include)]
 
     xcrun = shutil.which("xcrun")
     require(xcrun is not None,
@@ -281,8 +301,13 @@ def emit_metal_module(
         air = Path(temporary) / "kernel.air"
         module_cache = Path(temporary) / "module-cache"
         module_cache.mkdir()
+        compiled_source = source
+        if tilelang_assertions:
+            compiled_source = Path(temporary) / "kernel.metal"
+            compiled_source.write_text(source_text)
         subprocess.run(
-            [xcrun, "-sdk", "macosx", "metal", "-c", str(source),
+            [xcrun, "-sdk", "macosx", "metal", *include_arguments,
+             "-c", str(compiled_source),
              f"-fmodules-cache-path={module_cache}",
              "-o", str(air)], check=True, env=environment)
         subprocess.run(
@@ -291,6 +316,7 @@ def emit_metal_module(
     copy_manifest(manifest_path, output)
     emit_private_launch(
         output=output, backend="libtorch_mps", artifact_format="metallib",
-        artifact_file=artifact_file, kernel_name=name, launch=launch)
+        artifact_file=artifact_file, kernel_name=name, launch=launch,
+        error_buffer_index=error_buffer_index)
     print(f"[{compiler_name}] kernel: {signature}")
     print(f"[{compiler_name}] module: {output}")

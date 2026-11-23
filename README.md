@@ -60,7 +60,9 @@ library.
 under `TTL_BUILD_DIR`, then covers host tensors, device transfers, streams,
 timers, final-function launches, reusable program execution, and documented
 error paths. The CUDA profile also stresses repeated device-scalar launches
-across independent streams. An accelerator must be available for this target.
+across independent streams. The MPS profile executes valid TileLang-style
+checked kernels and verifies that bounds and domain failures surface at stream
+synchronization. An accelerator must be available for this target.
 
 Maintainers use `make archive-check` on a clean worktree to validate exactly
 the files that `git archive` will publish. `make release-check` combines that

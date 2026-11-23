@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "backend": "libtorch_mps",
+  "error_buffer_index": 2,
+  "artifact": {"format": "metallib", "file": "kernel.metallib"},
+  "kernel": {
+    "name": "checked_kernel",
+    "grid": [1],
+    "block": [1],
+    "shared_bytes": 0
+  }
+}

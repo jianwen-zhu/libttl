@@ -183,7 +183,7 @@ def main() -> None:
             emit_metal_module(
                 source=native_source, manifest_path=args.manifest,
                 output=args.output, compiler_name="ttl-tilelang",
-                launch=metal_launch)
+                launch=metal_launch, tilelang_assertions=True)
 
     if args.trace_dir is not None:
         assert trace_passes is not None

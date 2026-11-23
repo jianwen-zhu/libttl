@@ -8,6 +8,9 @@
   "properties": {
     "schema_version": {"const": 1},
     "backend": {"enum": ["libtorch_cuda", "libtorch_mps"]},
+    "error_buffer_index": {
+      "type": "integer", "minimum": 0, "maximum": 30
+    },
     "artifact": {
       "type": "object",
       "additionalProperties": false,
@@ -31,6 +34,10 @@
       }
     }
   },
+  "allOf": [{
+    "if": {"required": ["error_buffer_index"]},
+    "then": {"properties": {"backend": {"const": "libtorch_mps"}}}
+  }],
   "$defs": {
     "geometry": {
       "type": "array",
