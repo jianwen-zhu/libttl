@@ -29,6 +29,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -173,19 +174,30 @@ struct ttl_module {
     module_spec spec;
 };
 
+#if defined(TTL_LIBTORCH_CUDA)
+struct cuda_module_handle {
+    explicit cuda_module_handle(CUmodule value) : value(value) {}
+    ~cuda_module_handle() {
+        if (value != nullptr) cuModuleUnload(value);
+    }
+    cuda_module_handle(const cuda_module_handle &) = delete;
+    cuda_module_handle &operator=(const cuda_module_handle &) = delete;
+    CUmodule value;
+};
+#endif
+
 struct ttl_kernel {
 #if defined(TTL_LIBTORCH_CUDA)
-    ttl_kernel(module_spec spec, CUmodule module, CUfunction function,
+    ttl_kernel(module_spec spec,
+               std::shared_ptr<cuda_module_handle> module,
+               CUfunction function,
                c10::DeviceIndex device_index,
                std::vector<at::Tensor> scalar_storage)
-        : spec(std::move(spec)), module(module), function(function),
+        : spec(std::move(spec)), module(std::move(module)), function(function),
           device_index(device_index),
           scalar_storage(std::move(scalar_storage)) {}
-    ~ttl_kernel() {
-        if (module != nullptr) cuModuleUnload(module);
-    }
     module_spec spec;
-    CUmodule module;
+    std::shared_ptr<cuda_module_handle> module;
     CUfunction function;
     c10::DeviceIndex device_index;
     std::vector<at::Tensor> scalar_storage;
@@ -615,6 +627,52 @@ void check_cuda(CUresult status, const char *operation) {
     throw std::runtime_error(
         std::string(operation) + " failed: " + (name == nullptr ? "CUDA_ERROR" : name) +
         " (" + (description == nullptr ? "no description" : description) + ")");
+}
+
+std::shared_ptr<cuda_module_handle> load_cuda_module(
+    const std::filesystem::path &artifact,
+    const ttl_device_t *device) {
+    c10::cuda::CUDAGuard guard(device->value);
+    check_cuda(cuInit(0), "cuInit");
+    CUmodule native_module = nullptr;
+    check_cuda(
+        cuModuleLoad(&native_module, artifact.string().c_str()),
+        "cuModuleLoad");
+    try {
+        return std::make_shared<cuda_module_handle>(native_module);
+    } catch (...) {
+        cuModuleUnload(native_module);
+        throw;
+    }
+}
+
+ttl_kernel_t *prepare_cuda_kernel(
+    const ttl_module_t *module,
+    const ttl_device_t *device,
+    std::shared_ptr<cuda_module_handle> native_module) {
+    c10::cuda::CUDAGuard guard(device->value);
+    CUfunction function = nullptr;
+    check_cuda(
+        cuModuleGetFunction(
+            &function, native_module->value,
+            module->spec.kernel_name.c_str()),
+        "cuModuleGetFunction");
+    std::vector<bool> needs_device_scalar(
+        module->spec.scalars.size(), false);
+    for (const auto &argument : module->spec.arguments) {
+        if (argument.kind == argument_kind::scalar_device) {
+            needs_device_scalar[argument.index] = true;
+        }
+    }
+    std::vector<at::Tensor> scalar_storage(module->spec.scalars.size());
+    for (size_t i = 0; i < needs_device_scalar.size(); ++i) {
+        if (!needs_device_scalar[i]) continue;
+        scalar_storage[i] = at::empty(
+            {4}, at::TensorOptions().dtype(at::kByte).device(device->value));
+    }
+    return new ttl_kernel(
+        module->spec, std::move(native_module), function,
+        device->value.index(), std::move(scalar_storage));
 }
 #endif
 
@@ -1102,38 +1160,10 @@ ttl_status_t ttl_kernel_prepare(
     }
     return protect([&] {
 #if defined(TTL_LIBTORCH_CUDA)
-        c10::cuda::CUDAGuard guard(device->value);
-        check_cuda(cuInit(0), "cuInit");
-        CUmodule native_module = nullptr;
-        const std::string artifact =
-            (module->directory / module->spec.artifact_file).string();
-        check_cuda(cuModuleLoad(&native_module, artifact.c_str()), "cuModuleLoad");
-        try {
-            CUfunction function = nullptr;
-            check_cuda(
-                cuModuleGetFunction(
-                    &function, native_module, module->spec.kernel_name.c_str()),
-                "cuModuleGetFunction");
-            std::vector<bool> needs_device_scalar(module->spec.scalars.size(), false);
-            for (const auto &argument : module->spec.arguments) {
-                if (argument.kind == argument_kind::scalar_device) {
-                    needs_device_scalar[argument.index] = true;
-                }
-            }
-            std::vector<at::Tensor> scalar_storage(module->spec.scalars.size());
-            for (size_t i = 0; i < needs_device_scalar.size(); ++i) {
-                if (!needs_device_scalar[i]) continue;
-                scalar_storage[i] = at::empty(
-                    {4}, at::TensorOptions().dtype(at::kByte).device(device->value));
-            }
-            *kernel = new ttl_kernel(
-                module->spec, native_module, function, device->value.index(),
-                std::move(scalar_storage));
-            native_module = nullptr;
-        } catch (...) {
-            if (native_module != nullptr) cuModuleUnload(native_module);
-            throw;
-        }
+        const std::filesystem::path artifact =
+            module->directory / module->spec.artifact_file;
+        *kernel = prepare_cuda_kernel(
+            module, device, load_cuda_module(artifact, device));
 #else
         if (!device->value.is_mps() || device->value.index() != 0) {
             throw std::invalid_argument("prepared device is not the MPS accelerator");
@@ -1493,6 +1523,11 @@ ttl_status_t ttl_program_prepare(
             ttl_kernel_t *kernel;
         };
         std::map<std::string, prepared_function> functions;
+#if defined(TTL_LIBTORCH_CUDA)
+        std::vector<std::pair<
+            std::filesystem::path,
+            std::shared_ptr<cuda_module_handle>>> cuda_modules;
+#endif
 
         for (const auto &call : program->spec.calls) {
             auto function = functions.find(call.function);
@@ -1509,12 +1544,38 @@ ttl_status_t ttl_program_prepare(
                 }
                 prepared->modules.push_back(module);
                 ttl_kernel_t *kernel = nullptr;
+#if defined(TTL_LIBTORCH_CUDA)
+                const std::filesystem::path artifact =
+                    module->directory / module->spec.artifact_file;
+                std::shared_ptr<cuda_module_handle> native_module;
+                for (const auto &[loaded_path, loaded_module] : cuda_modules) {
+                    std::error_code error;
+                    const bool same_file = std::filesystem::equivalent(
+                        loaded_path, artifact, error);
+                    if (error) {
+                        throw std::runtime_error(
+                            "cannot compare CUDA module artifacts: " +
+                            error.message());
+                    }
+                    if (same_file) {
+                        native_module = loaded_module;
+                        break;
+                    }
+                }
+                if (!native_module) {
+                    native_module = load_cuda_module(artifact, device);
+                    cuda_modules.emplace_back(artifact, native_module);
+                }
+                kernel = prepare_cuda_kernel(
+                    module, device, std::move(native_module));
+#else
                 status = ttl_kernel_prepare(module, device, &kernel);
                 if (status != TTL_STATUS_OK) {
                     throw std::invalid_argument(
                         "cannot prepare program function " + call.function +
                         ": " + last_error);
                 }
+#endif
                 prepared->kernels.push_back(kernel);
                 function = functions.emplace(
                     call.function, prepared_function{module, kernel}).first;

@@ -23,6 +23,20 @@ describes one final function signature, while `launch.json` and the native
 artifact are backend-specific compiler products. Host applications load only
 the program directory and do not enumerate those packages.
 
+CUDA program packages may hardlink several function artifacts to one combined
+cubin. Preparation recognizes file-equivalent artifacts, loads the cubin once,
+and resolves each function's manifest kernel symbol from that shared native
+module. Standalone kernel preparation and distinct artifact files retain their
+existing independent-loading behavior.
+
+A combined CUDA translation unit must keep every manifest kernel symbol unique
+and compile all functions for the same target and compiler options. Producers
+may hoist common includes, but must not place headers inside per-function
+namespaces or allow function-local macros and helper declarations to collide.
+Each function retains its own IR-derived launch geometry and dynamic
+shared-memory value. Source boundaries should use `#line` directives so a
+batch compiler error still identifies the originating function.
+
 A program is analogous to a C function and may be used at either boundary. An
 application may load a reusable subroutine and invoke it repeatedly, while a
 compiler consuming a flattened export may emit the complete unrolled DAG as

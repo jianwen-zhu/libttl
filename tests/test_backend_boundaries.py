@@ -34,6 +34,15 @@ class BackendBoundaryTest(unittest.TestCase):
         common_makefile = (ROOT / "src" / "Makefile").read_text()
         self.assertIn("$(CXX) -std=c++17 -O2 -Wall -Wextra", common_makefile)
 
+    def test_cuda_programs_share_hardlinked_native_modules(self):
+        implementation = (
+            ROOT / "src" / "backend_libtorch_impl.inc").read_text()
+        self.assertIn(
+            "std::shared_ptr<cuda_module_handle> module", implementation)
+        self.assertIn("std::filesystem::equivalent(", implementation)
+        self.assertIn("native_module = loaded_module", implementation)
+        self.assertIn("cuModuleUnload(value)", implementation)
+
 
 if __name__ == "__main__":
     unittest.main()

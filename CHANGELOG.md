@@ -11,6 +11,8 @@ contract carry their own compatibility versions.
   reject inconsistent dynamic shared-memory launch metadata.
 - Derive TileLang CUDA dynamic shared-memory bytes from the selected lowered
   device function while retaining authored launch metadata for raw CUDA.
+- Reuse a hardlinked combined cubin across functions prepared as one CUDA
+  program while retaining independent per-function package contracts.
 
 ## 0.1.1 - 2026-11-23
 
