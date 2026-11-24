@@ -43,6 +43,11 @@ class BackendBoundaryTest(unittest.TestCase):
         self.assertIn("native_module = loaded_module", implementation)
         self.assertIn("cuModuleUnload(value)", implementation)
 
+    def test_tilelang_source_builder_is_backend_specific(self):
+        packager = (ROOT / "tool" / "ttl-tilelang").read_text()
+        self.assertIn(
+            'enable_device_compile=(backend == "libtorch_mps")', packager)
+
 
 if __name__ == "__main__":
     unittest.main()

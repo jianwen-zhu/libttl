@@ -163,10 +163,15 @@ def main() -> None:
             native_target = Target(target)
             with native_target, tvm_transform.PassContext(
                     opt_level=3, config=kernel.pass_configs or {}):
+                # TileLang 0.1.13 applies required Metal address-space
+                # finalization only in its normal device builder. Constructing
+                # that source module is lazy: native Metal compilation still
+                # belongs exclusively to emit_metal_module below. CUDA keeps
+                # the source-only builder so TileLang does not invoke nvcc.
                 lowered = tilelang.lower(
                     prim_func, target=native_target,
                     enable_host_codegen=False,
-                    enable_device_compile=False)
+                    enable_device_compile=(backend == "libtorch_mps"))
             native_source_text = lowered.kernel_source
     except Exception:
         if trace_stdout is not None:

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "name": "tilelang.shared-gemm",
+  "kernel": {"name": "shared_gemm_kernel"},
+  "tensors": [
+    {"name": "output", "dtype": "float32", "access": "write", "shape": [8, 8]},
+    {"name": "left", "dtype": "float32", "access": "read", "shape": [8, 8]},
+    {"name": "right", "dtype": "float32", "access": "read", "shape": [8, 8]}
+  ],
+  "scalars": [],
+  "arguments": [
+    {"parameter": "left", "kind": "tensor", "name": "left"},
+    {"parameter": "output", "kind": "tensor", "name": "output"},
+    {"parameter": "right", "kind": "tensor", "name": "right"}
+  ]
+}

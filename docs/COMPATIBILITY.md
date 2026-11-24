@@ -26,6 +26,9 @@ synchronized. Unknown host-error shapes are rejected rather than removed.
 For TileLang CUDA packages, dynamic shared-memory bytes are extracted from the
 matching lowered device function instead of being recomputed from kernel
 shapes. Raw CUDA packages remain responsible for their authored launch value.
+For TileLang 0.1.13 on Metal, source extraction uses TileLang's lazy normal
+builder so its required shared-pointer address-space finalization is retained;
+libttl remains the only component that invokes the native Metal tools.
 
 jsoncons 1.9.0 is the only additional C++ dependency. `make bootstrap`
 installs its checksum-pinned headers outside the checkout.

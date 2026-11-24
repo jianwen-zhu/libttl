@@ -115,7 +115,8 @@ static-check:
 		tool/ttl_compiler.py tool/tilelang_metadata.py \
 		tool/cuda_assertions.py tool/metal_assertions.py \
 		tool/ttl-cuda tool/ttl-metal tool/ttl-tilelang \
-		tool/torch_flags.py tool/embed_schema.py scripts/install_jsoncons.py
+		tool/torch_flags.py tool/embed_schema.py scripts/install_jsoncons.py \
+		tests/package_tilelang_metal_shared.py
 	@$(CC) -std=c11 -Wall -Wextra -Wpedantic -Werror \
 		-Iinclude -fsyntax-only examples/host_compare.c
 	@PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s tests

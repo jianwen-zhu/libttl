@@ -64,6 +64,14 @@ an authored nonzero value must equal TileLang's allocation. Missing, ambiguous,
 symbolic, negative, or oversized lowered allocations are rejected. The native
 source is checked against that derived launch value before compilation.
 
+TileLang 0.1.13's normal Metal source builder performs required pointer
+address-space finalization that its nominal no-compile builder omits. The
+normal builder constructs a lazy source module; inspecting that source does
+not compile a native library. `ttl-tilelang` therefore uses the normal builder
+for Metal and still performs the only `metal`/`metallib` invocation in the
+shared packager. CUDA continues to use TileLang's source-only builder before
+the single libttl-owned `nvcc` invocation.
+
 For the MPS profile, `ttl-tilelang` also preserves the single-message
 `RuntimeError` assertion form emitted by TileLang 0.1.13. The packager lowers
 that generated host-style error block to LibTorch's Metal error-buffer

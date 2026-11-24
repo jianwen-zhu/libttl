@@ -618,14 +618,76 @@ static void check_bounds_assertion(
     ttl_tensor_destroy(table);
     ttl_kernel_destroy(kernel);
 }
+
+static void check_tilelang_shared_gemm(
+    const char *module_path, ttl_device_t *device, ttl_stream_t *stream) {
+    enum { extent = 8, elements = extent * extent };
+    const int64_t shape[] = {extent, extent};
+    float left_values[elements];
+    float right_values[elements];
+    float expected[elements];
+    float result[elements];
+    ttl_module_t *module = NULL;
+    ttl_kernel_t *kernel = NULL;
+    ttl_tensor_t *output = NULL;
+    ttl_tensor_t *left = NULL;
+    ttl_tensor_t *right = NULL;
+    ttl_tensor_t *tensors[3];
+
+    for (size_t row = 0; row < extent; ++row) {
+        for (size_t column = 0; column < extent; ++column) {
+            const size_t index = row * extent + column;
+            left_values[index] =
+                (float)((int)((row + 2) * (column + 1) % 7) - 3) * 0.25f;
+            right_values[index] =
+                (float)((int)((row + 1) * (column + 3) % 11) - 5) * 0.125f;
+        }
+    }
+    for (size_t row = 0; row < extent; ++row) {
+        for (size_t column = 0; column < extent; ++column) {
+            float value = 0.0f;
+            for (size_t inner = 0; inner < extent; ++inner) {
+                value += left_values[row * extent + inner] *
+                    right_values[inner * extent + column];
+            }
+            expected[row * extent + column] = value;
+        }
+    }
+
+    EXPECT_OK(ttl_module_load(module_path, &module));
+    EXPECT_OK(ttl_kernel_prepare(module, device, &kernel));
+    ttl_module_destroy(module);
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 2, shape, &output));
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 2, shape, &left));
+    EXPECT_OK(ttl_tensor_empty(
+        device, TTL_DTYPE_FLOAT32, 2, shape, &right));
+    tensors[0] = output;
+    tensors[1] = left;
+    tensors[2] = right;
+    EXPECT_OK(ttl_tensor_write(left, left_values, sizeof(left_values)));
+    EXPECT_OK(ttl_tensor_write(right, right_values, sizeof(right_values)));
+    EXPECT_OK(ttl_kernel_launch(kernel, tensors, 3, NULL, 0, stream));
+    EXPECT_OK(ttl_stream_synchronize(stream));
+    EXPECT_OK(ttl_tensor_read(output, result, sizeof(result)));
+    for (size_t i = 0; i < elements; ++i) {
+        CHECK(fabsf(result[i] - expected[i]) <= 1.0e-4f);
+    }
+
+    ttl_tensor_destroy(right);
+    ttl_tensor_destroy(left);
+    ttl_tensor_destroy(output);
+    ttl_kernel_destroy(kernel);
+}
 #endif
 
 int main(int argc, char **argv) {
-    if (argc != 9) {
+    if (argc != 10) {
         fprintf(stderr,
                 "usage: %s MALFORMED_MODULES MALFORMED_PROGRAMS "
                 "BINDING_MODULE DYNAMIC_MODULE PROGRAM SCALAR_STRESS "
-                "ASSERT_DOMAIN ASSERT_BOUNDS\n",
+                "ASSERT_DOMAIN ASSERT_BOUNDS TILELANG_SHARED\n",
                 argv[0]);
         return 2;
     }
@@ -665,6 +727,7 @@ int main(int argc, char **argv) {
 #else
     check_domain_assertion(argv[7], device, first);
     check_bounds_assertion(argv[8], device, first);
+    check_tilelang_shared_gemm(argv[9], device, first);
 #endif
 
     EXPECT_OK(ttl_stream_synchronize(first));

@@ -13,6 +13,8 @@ contract carry their own compatibility versions.
   device function while retaining authored launch metadata for raw CUDA.
 - Reuse a hardlinked combined cubin across functions prepared as one CUDA
   program while retaining independent per-function package contracts.
+- Preserve TileLang 0.1.13 Metal shared-memory address-space finalization while
+  retaining one authoritative native Metal compilation in the packager.
 
 ## 0.1.1 - 2026-11-23
 
