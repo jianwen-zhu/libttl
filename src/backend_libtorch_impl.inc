@@ -682,6 +682,8 @@ extern "C" {
 
 uint32_t ttl_api_version(void) { return TTL_API_VERSION; }
 
+const char *ttl_library_version(void) { return TTL_LIBRARY_VERSION; }
+
 const char *ttl_last_error(void) { return last_error.c_str(); }
 
 const char *ttl_dtype_name(ttl_dtype_t dtype) {

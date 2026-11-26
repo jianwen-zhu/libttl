@@ -84,6 +84,8 @@ package-check: build
 		ttl-fixture-v1; do \
 		test -f "$$package_root/usr/local/share/libttl/schema/$$schema.schema.json"; \
 	done; \
+	test "$$(cat "$$package_root/usr/local/share/libttl/VERSION")" = \
+		"$$(cat VERSION)"; \
 	test -f "$$package_root/usr/local/share/doc/libttl/LICENSE"; \
 	test -f "$$package_root/usr/local/share/doc/libttl/THIRD_PARTY_NOTICES.md"; \
 	test -f "$$package_root/usr/local/lib/pkgconfig/libttl.pc"; \
@@ -91,6 +93,7 @@ package-check: build
 		$(PKG_CONFIG) --modversion libttl)" = "$$(cat VERSION)"; \
 	install -d "$$package_root/usr/local/bin"; \
 	$(CC) -std=c11 -Wall -Wextra -Wpedantic \
+		-DTTL_EXPECTED_LIBRARY_VERSION='"$(strip $(shell cat VERSION))"' \
 		-I"$$package_root/usr/local/include" tests/api_host_tests.c \
 		-L"$$package_root/usr/local/lib" -lttl \
 		'-Wl,-rpath,$(PACKAGE_RPATH)' \

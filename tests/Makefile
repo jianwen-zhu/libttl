@@ -121,6 +121,7 @@ schema: $(CONTRACT_CHECKER)
 $(HOST_TEST): api_host_tests.c $(TTL_LIBRARY_DIR)/libttl.so
 	@mkdir -p '$(dir $(HOST_TEST))'
 	@$(CC) -std=c11 -O2 -Wall -Wextra -Wpedantic -I../include \
+		-DTTL_EXPECTED_LIBRARY_VERSION='"$(strip $(shell cat ../VERSION))"' \
 		api_host_tests.c -L$(TTL_LIBRARY_DIR) -lttl \
 		'-Wl,-rpath,$(TEST_RPATH)' -lm -o $(HOST_TEST)
 

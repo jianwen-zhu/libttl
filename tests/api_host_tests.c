@@ -45,6 +45,7 @@ static void check_dtypes(void) {
     };
 
     CHECK(ttl_api_version() == TTL_API_VERSION);
+    CHECK(strcmp(ttl_library_version(), TTL_EXPECTED_LIBRARY_VERSION) == 0);
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
         size_t bytes = SIZE_MAX;
         CHECK(strcmp(ttl_dtype_name(cases[i].dtype), cases[i].name) == 0);

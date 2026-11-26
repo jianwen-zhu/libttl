@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 #define TTL_API_VERSION_MAJOR 1u
-#define TTL_API_VERSION_MINOR 3u
+#define TTL_API_VERSION_MINOR 4u
 #define TTL_API_VERSION_PATCH 0u
 #define TTL_API_VERSION_ENCODE(major, minor, patch) \
     (((uint32_t)(major) << 24) | ((uint32_t)(minor) << 16) | (uint32_t)(patch))
@@ -79,8 +79,12 @@ typedef struct ttl_program_binding {
     ttl_tensor_t *tensor;
 } ttl_program_binding_t;
 
-/* Error text is owned by libttl until the next call on the same thread. */
+/* The API version describes ABI compatibility. The library version identifies
+ * the installed libttl release and is independent of backend selection. */
 uint32_t ttl_api_version(void);
+const char *ttl_library_version(void);
+
+/* Error text is owned by libttl until the next call on the same thread. */
 const char *ttl_last_error(void);
 const char *ttl_dtype_name(ttl_dtype_t dtype);
 size_t ttl_dtype_bit_width(ttl_dtype_t dtype);

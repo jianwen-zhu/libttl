@@ -5,6 +5,8 @@ contract carry their own compatibility versions.
 
 ## Unreleased
 
+## 0.1.2 - 2026-11-25
+
 - Build LibTorch-backed implementations as C++20 for compatibility with
   PyTorch 2.14 headers while keeping the shared contract checker independent.
 - Preserve supported TileLang CUDA assertions before native compilation and
@@ -15,6 +17,9 @@ contract carry their own compatibility versions.
   program while retaining independent per-function package contracts.
 - Preserve TileLang 0.1.13 Metal shared-memory address-space finalization while
   retaining one authoritative native Metal compilation in the packager.
+- Publish the compiled library release through `ttl_library_version()`, the
+  installed `share/libttl/VERSION` file, and the existing pkg-config metadata.
+  This backward-compatible API addition advances the C API to 1.4.0.
 
 ## 0.1.1 - 2026-11-23
 

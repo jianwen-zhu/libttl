@@ -16,7 +16,7 @@ class ApiSurfaceTest(unittest.TestCase):
             exercised.update(FUNCTION.findall(
                 (ROOT / "tests" / source).read_text()))
         self.assertEqual(declared, exercised)
-        self.assertEqual(len(declared), 42)
+        self.assertEqual(len(declared), 43)
 
 
 if __name__ == "__main__":

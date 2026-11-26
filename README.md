@@ -41,8 +41,9 @@ make examples-check TTL_BACKEND=libtorch_mps PYTHON=/path/to/python
 ```
 
 It creates two tensors through the public C API and compares them without
-using backend-private types. Installations also provide `libttl.pc`, so C
-consumers can obtain compile and link flags with `pkg-config`.
+using backend-private types. Installations provide `libttl.pc` for compile and
+link flags, `share/libttl/VERSION` for package inspection, and
+`ttl_library_version()` for checking the release actually loaded at runtime.
 
 Checks that do not require an accelerator are available separately:
 

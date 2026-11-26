@@ -1,8 +1,10 @@
 # Release gates
 
-The repository version is stored in `VERSION`. Three public surfaces are
+The repository version is stored in `VERSION`. Four public surfaces are
 versioned independently:
 
+- `ttl_library_version()` identifies the compiled libttl release. Installed
+  `share/libttl/VERSION` and `libttl.pc` publish the same value.
 - `TTL_API_VERSION` in `include/libttl.h` versions the C ABI.
 - Compiler interface version 1 covers the three native function packagers.
 - The module, launch, program, and fixture schemas carry their own versions.
@@ -20,6 +22,15 @@ Before publishing a release:
 6. Qualify the candidate through the pinned downstream integration suite.
 7. Build the public source archive from the tested commit and inspect its file
    list before creating the release tag.
+
+Publish an immutable tag and the source archive SHA-256 together. Downstream
+build caches should include that source checksum, release version, backend,
+toolchain, and target profile in their key. Before execution, a runner should
+call `ttl_library_version()` in the same process and require the tested release.
+When provenance must identify the exact backend binary as well, resolve the
+loaded library path and compare its SHA-256 with the build-specific digest
+recorded by the packager. Binary digests are platform-specific and do not
+replace the canonical source archive checksum.
 
 `release-check` combines `archive-check` and `backend-check` when both can run
 in the same Git worktree. `archive-check` refuses a dirty or non-Git worktree,

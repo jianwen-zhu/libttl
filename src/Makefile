@@ -123,6 +123,7 @@ endif
 
 $(OUTPUT): Makefile $(BACKEND_CONFIG) $(SOURCE) $(BACKEND_SUPPORT_FILES) \
 		$(MANIFEST_SOURCE) manifest_json.h ../include/libttl.h $(EXPORT_CONTROL) \
+		../VERSION \
 		$(MODULE_SCHEMA_HEADER) $(LAUNCH_SCHEMA_HEADER) \
 		$(PROGRAM_SCHEMA_HEADER) $(FIXTURE_SCHEMA_HEADER)
 	@mkdir -p '$(dir $(OUTPUT))'
@@ -130,6 +131,7 @@ $(OUTPUT): Makefile $(BACKEND_CONFIG) $(SOURCE) $(BACKEND_SUPPORT_FILES) \
 	compile_flags="$$( $(BACKEND_COMPILE_FLAGS_COMMAND) )"; \
 	link_flags="$$( $(BACKEND_LINK_FLAGS_COMMAND) )"; \
 	$(CXX) -std=$(BACKEND_CXX_STANDARD) -O2 -fPIC -Wall -Wextra \
+		-DTTL_LIBRARY_VERSION='"$(PACKAGE_VERSION)"' \
 		-I../include -I'$(JSONCONS_INCLUDE_DIR)' \
 		-I'$(dir $(MODULE_SCHEMA_HEADER))' $$compile_flags -shared \
 		$(SOURCE) $(MANIFEST_SOURCE) -o $(OUTPUT) \
@@ -144,6 +146,7 @@ install: all
 	@install -m 644 ../include/libttl.h '$(DESTDIR)$(INCLUDEDIR)/libttl.h'
 	@install -m 644 ../schema/*.schema.json \
 		'$(DESTDIR)$(DATADIR)/libttl/schema/'
+	@install -m 644 ../VERSION '$(DESTDIR)$(DATADIR)/libttl/VERSION'
 	@install -m 644 ../LICENSE ../THIRD_PARTY_NOTICES.md \
 		'$(DESTDIR)$(DOCDIR)/'
 	@sed -e 's|@PREFIX@|$(PREFIX)|g' \

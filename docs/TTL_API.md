@@ -37,6 +37,22 @@ if (loaded_major != TTL_API_VERSION_MAJOR ||
 }
 ```
 
+`ttl_library_version()` returns the release version compiled into the loaded
+library, such as `"0.1.2"`. Use it when a runner must require an exact tested
+libttl release. This is distinct from `ttl_api_version()`: several releases
+may implement the same compatible API, while a minor API increase can still be
+backward compatible.
+
+```c
+if (strcmp(ttl_library_version(), "0.1.2") != 0) {
+    /* This process loaded a different libttl release. */
+}
+```
+
+An installation publishes the same release in `libttl.pc` and
+`share/libttl/VERSION`. The function is the authoritative check for the
+library actually loaded by the process.
+
 ## Error handling
 
 Most operations return `ttl_status_t`:

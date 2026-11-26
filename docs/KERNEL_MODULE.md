@@ -42,7 +42,7 @@ $ tool/ttl-metal --source kernel.metal --manifest module.json --output out
 $ tool/ttl-tilelang --source kernel.py \
     --manifest module.json --output out
 $ tool/ttl-cuda --version
-ttl-cuda 0.1.1 (TTL compiler interface 1)
+ttl-cuda 0.1.2 (TTL compiler interface 1)
 ```
 
 The project-provided tools expect the shared checker built by

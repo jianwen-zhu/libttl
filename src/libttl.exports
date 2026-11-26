@@ -11,6 +11,7 @@ ttl_kernel_destroy
 ttl_kernel_launch
 ttl_kernel_prepare
 ttl_last_error
+ttl_library_version
 ttl_module_destroy
 ttl_module_load
 ttl_module_required_capabilities

@@ -43,6 +43,8 @@ tested configurations, not a restriction on other compatible systems.
 | 2026-09-13 | `libtorch_cuda` | NVIDIA T4 on CloudMake | CloudMake CUDA/PyTorch image | Complete backend release checks passed; provenance `d0bc345cc5bc46c087017f7d2923c3ac` |
 | 2026-09-13 | `libtorch_mps` | Apple M3 Pro | macOS 26.0.1, Xcode 26.3, Python 3.13.7, PyTorch 2.13.0 | Complete clean-source and backend release checks passed |
 | 2026-11-23 | `libtorch_mps` | Apple M3 Pro | macOS 26.0.1, Xcode 26.3, Python 3.13.7, PyTorch 2.13.0, TileLang 0.1.13 | Complete archive, backend, assertion, and downstream course qualification passed for 0.1.1 |
+| 2026-11-25 | `libtorch_cuda` | NVIDIA T4 | TileLang 0.1.13; libttl `4728aaa67f730a40431f320ad7b98ed929bb0b84` | Downstream qualification v3 passed full GPT and baseline-self gates; T4 was stopped and confirmed absent afterward |
+| 2026-11-25 | `libtorch_mps` | Apple Metal | TileLang 0.1.13; libttl `4728aaa67f730a40431f320ad7b98ed929bb0b84` | Downstream qualification v3 passed full GPT and baseline-self gates |
 
 Future releases should update this table with their actual validation profiles
 instead of treating these versions as permanent minimums or maximums.
@@ -89,6 +91,7 @@ usr/local/
   include/libttl.h
   lib/libttl.so
   lib/pkgconfig/libttl.pc
+  share/libttl/VERSION
   share/libttl/schema/*.schema.json
   share/doc/libttl/LICENSE
   share/doc/libttl/THIRD_PARTY_NOTICES.md
